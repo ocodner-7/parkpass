@@ -1,12 +1,8 @@
 // src/app/api/graphql/route.ts
 import { ApolloServer } from '@apollo/server'
 import { startServerAndCreateNextHandler } from '@as-integrations/next'
-
-const typeDefs = `
-  type Query {
-    hello: String
-  }
-`
+import { NextRequest } from 'next/server'
+import { typeDefs } from '@/graphql'
 
 const resolvers = {
   Query: {
@@ -15,6 +11,26 @@ const resolvers = {
 }
 
 const server = new ApolloServer({ typeDefs, resolvers })
-const handler = startServerAndCreateNextHandler(server)
+const handler = startServerAndCreateNextHandler<NextRequest>(server)
 
-export { handler as GET, handler as POST }
+export async function GET(request: NextRequest) {
+  const response = await handler(request)
+  response.headers.set('Access-Control-Allow-Origin', '*')
+  return response
+}
+
+export async function POST(request: NextRequest) {
+  const response = await handler(request)
+  response.headers.set('Access-Control-Allow-Origin', '*')
+  return response
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
