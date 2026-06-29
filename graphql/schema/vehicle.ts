@@ -1,4 +1,6 @@
-export const vehicleTypeDefs = `
+import gql from "graphql-tag";
+
+export const vehicleTypeDefs = gql`
   type Vehicle {
     id: ID!
     nickname: String

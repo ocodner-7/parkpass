@@ -1,4 +1,6 @@
-export const passTypeDefs =`
+import gql from "graphql-tag";
+
+export const passTypeDefs = gql`
   enum PassStatus {
     ACTIVE
     EXPIRED

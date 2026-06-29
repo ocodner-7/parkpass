@@ -1,4 +1,6 @@
-export const councilTypeDefs = `
+import gql from "graphql-tag";
+
+export const councilTypeDefs = gql`
   type Council {
     id: ID!
     name: String!

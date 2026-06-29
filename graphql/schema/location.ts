@@ -1,4 +1,6 @@
-export const locationTypeDefs = `
+import gql from "graphql-tag";
+
+export const locationTypeDefs = gql`
   type Location {
     id: ID!
     nickname: String

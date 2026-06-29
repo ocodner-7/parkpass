@@ -1,4 +1,6 @@
-export const householdTypeDefs = `
+import gql from "graphql-tag";
+
+export const householdTypeDefs = gql`
   type Household {
     id: ID!
     members: [User!]!

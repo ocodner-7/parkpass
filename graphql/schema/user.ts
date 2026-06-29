@@ -1,4 +1,6 @@
-export const userTypeDefs = `
+import gql from "graphql-tag"
+
+export const userTypeDefs = gql`
   enum Role {
     OWNER
     MEMBER
