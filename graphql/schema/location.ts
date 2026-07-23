@@ -10,5 +10,6 @@ export const locationTypeDefs = gql`
     postcode: String!
     householdId: ID!
     councilId: ID!
+    activePassCount: Int!
   }
 `

@@ -3,11 +3,10 @@ import { ApolloServer } from '@apollo/server'
 import { startServerAndCreateNextHandler } from '@as-integrations/next'
 import { NextRequest } from 'next/server'
 import { typeDefs } from '@/graphql'
+import { queryResolvers } from '@/graphql/resolvers/query'
 
 const resolvers = {
-  Query: {
-    hello: () => 'Hello from GraphQL!',
-  },
+  Query: queryResolvers
 }
 
 const server = new ApolloServer({ typeDefs, resolvers })
