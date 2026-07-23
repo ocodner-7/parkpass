@@ -5,7 +5,6 @@ import { useHousehold } from "@/hooks/queries/useHousehold";
 import Link from "next/link";
 import { Ticket, Car, Users, Wallet, Plus } from "lucide-react";
 import { NumberPlate } from "../components/ui/NumberPlate";
-import { supabase } from "@/lib/supabase";
 import { useHouseholdStore } from "@/store/householdStore";
 import { motion } from "motion/react";
 import { useCouncil } from "@/hooks/queries/useCouncil";

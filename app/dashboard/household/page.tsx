@@ -38,7 +38,7 @@ function MemberCard({
   return (
     <div className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
           <span className="text-sm font-medium text-blue-700">
             {member.firstName[0]}
             {member.lastName[0]}
@@ -192,7 +192,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
           <button
             onClick={handleSubmit}
             disabled={isLoading || !isValid}
-            className="px-5 py-2 text-sm cursor-pointer font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {isLoading ? "Sending invite..." : "Send invite"}
           </button>

@@ -12,4 +12,4 @@ export const locationTypeDefs = gql`
     councilId: ID!
     activePassCount: Int!
   }
-`
+`;

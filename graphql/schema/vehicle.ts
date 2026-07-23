@@ -8,4 +8,4 @@ export const vehicleTypeDefs = gql`
     userId: ID!
     householdId: ID!
   }
-`
+`;

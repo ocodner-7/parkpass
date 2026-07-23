@@ -8,4 +8,4 @@ export const householdTypeDefs = gql`
     monthlyQuota: Int!
     quotaUsedThisMonth: Int!
   }
-`
+`;

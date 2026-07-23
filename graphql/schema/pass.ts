@@ -17,4 +17,4 @@ export const passTypeDefs = gql`
     issuedBy: ID!
     status: PassStatus!
   }
-`
+`;

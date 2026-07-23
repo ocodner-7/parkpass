@@ -1,5 +1,5 @@
 "use client";
-import { Search, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import { useState } from "react";
 import { useUser } from "@/hooks/utils/useUser";
@@ -26,7 +26,7 @@ export const TopBar = () => {
       <div className="h-14 border-b border-border-default bg-surface-secondary flex items-center justify-between px-4 lg:px-6 gap-3">
         <button
           onClick={() => setShowDrawer(true)}
-          className="flex sm:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-primary border border-border-default max-w-[180px] cursor-pointer"
+          className="flex sm:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-primary border border-border-default max-w-45 cursor-pointer"
         >
           <span className="text-sm font-medium text-content-primary truncate">
             {activeLocation?.nickname ??

@@ -23,7 +23,7 @@ export const useHouseholdStore = create<HouseholdStore>()(
       clearHousehold: () => set({ household: null }),
     }),
     {
-      name: 'parkpass-household',
-    }
-  )
+      name: "parkpass-household",
+    },
+  ),
 );

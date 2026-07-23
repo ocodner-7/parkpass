@@ -38,7 +38,7 @@ function PassRow({ pass }: { pass: Pass }) {
   return (
     <li className="flex items-center justify-between py-4">
       <div className="flex items-center gap-4">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <NumberPlate registration={pass.registration} />
         </div>
         <div>

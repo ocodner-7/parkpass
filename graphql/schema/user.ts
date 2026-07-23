@@ -1,4 +1,4 @@
-import gql from "graphql-tag"
+import gql from "graphql-tag";
 
 export const userTypeDefs = gql`
   enum Role {
@@ -14,4 +14,4 @@ export const userTypeDefs = gql`
     householdId: ID!
     role: Role!
   }
-`
+`;

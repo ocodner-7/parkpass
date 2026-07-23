@@ -2,7 +2,6 @@ import { Sidebar } from "@/app/components/sidebar/Sidebar";
 import { TopBar } from "@/app/components/topbar/TopBar";
 import { BottomTabBar } from "@/app/components/ui/mobile/BottomTabBar";
 import { HouseholdProvider } from "@/app/components/dashboard/HouseholdProvider";
-import { motion } from "motion/react";
 import { PageTransition } from "../components/ui/PageTransition";
 
 export default function DashboardLayout({

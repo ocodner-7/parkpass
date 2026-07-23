@@ -13,4 +13,4 @@ export const councilTypeDefs = gql`
     operatingHoursStart: Int
     operatingHoursEnd: Int
   }
-`
+`;

@@ -22,7 +22,7 @@ function VehicleCard({
   return (
     <div className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-gray-900 border border-border-default flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-gray-900 border border-border-default flex items-center justify-center shrink-0">
           <Car className="w-5 h-5 text-content-primary" />
         </div>
         <div className="flex gap-4 items-center">
@@ -36,7 +36,7 @@ function VehicleCard({
       </div>
       <button
         onClick={() => onRemove(vehicle.id)}
-        className="w-8 h-8 cursor-pointer flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer"
+        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer"
       >
         <X className="w-4 h-4" />
       </button>
@@ -212,7 +212,7 @@ export default function VehiclesPage() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Add vehicle

@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Wallet, Check } from "lucide-react";
 import { useHousehold } from "@/hooks/queries/useHousehold";
-import { mockCouncils } from "@/graphql/mock-data";
 import { useLocationStore } from "@/store/locationStore";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useCouncil } from "@/hooks/queries/useCouncil";
@@ -22,7 +21,6 @@ export default function TopUpPage() {
   const queryClient = useQueryClient();
 
   const household = data?.household;
-  // const council = mockCouncils.find(c => c.id === activeLocation?.councilId)
   const { data: councilData } = useCouncil(activeLocation?.councilId ?? "");
   const pricePerHour = councilData?.council?.pricePerHour ?? 150; // pence
   const monthlyQuota = councilData?.council?.monthlyQuotaHours ?? 50;
