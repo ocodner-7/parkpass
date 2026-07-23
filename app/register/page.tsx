@@ -41,7 +41,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-      <div className="bg-gray-900 border border-border-default rounded-2xl shadow-sm w-full max-w-sm p-8">
+      <div className="bg-surface-secondary border border-border-default rounded-2xl shadow-sm w-full max-w-sm p-8">
         {/* Logo */}
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-content-primary">
