@@ -23,8 +23,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <ModalWrapper onClose={onCancel}>
-      <div className="relative bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-default-subtle">
+      <div className="relative bg-surface-secondary rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5">
           <h2 className="text-base font-semibold text-content-primary">{title}</h2>
           <button
             onClick={onCancel}
@@ -38,7 +38,7 @@ export function ConfirmDialog({
           <p className="text-sm text-content-muted">{message}</p>
         </div>
 
-        <div className="px-6 py-4 border-t border-border-default-subtle flex justify-end gap-3 bg-surface-primary">
+        <div className="px-6 py-4 border-t border-border-subtle flex justify-end gap-3 bg-surface-secondary">
           <button
             onClick={onCancel}
             className="px-4 py-2 text-sm text-content-muted hover:text-content-primary transition-colors cursor-pointer"
@@ -48,7 +48,7 @@ export function ConfirmDialog({
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className={`px-5 py-2 text-sm font-medium rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
+            className={`px-5 py-2 text-sm font-medium rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
               isDangerous
                 ? "bg-red-600 text-white hover:bg-red-700"
                 : "bg-blue-600 text-white hover:bg-blue-700"

@@ -70,7 +70,7 @@ export const Sidebar = () => {
         </span>
 
         <button
-          className="w-5 h-5 rounded flex items-center justify-center border border-border-default hover:bg-surface-elevated cursor-pointer transition-colors cursor-pointer"
+          className="w-5 h-5 rounded flex items-center justify-center border border-border-default hover:bg-surface-elevated transition-colors cursor-pointer"
           aria-label="Add location"
           onClick={() => setShowModal(true)}
         >
