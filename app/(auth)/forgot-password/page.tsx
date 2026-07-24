@@ -1,46 +1,50 @@
-'use client'
-import { useState } from 'react'
-import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    setError('')
-    setIsLoading(true)
+    setError("");
+    setIsLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-    })
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
+    });
 
     if (error) {
-      setError(error.message)
-      setIsLoading(false)
-      return
+      setError(error.message);
+      setIsLoading(false);
+      return;
     }
 
-    setSubmitted(true)
-    setIsLoading(false)
-  }
+    setSubmitted(true);
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-surface-primary flex items-center justify-center">
       <div className="bg-surface-secondary border border-border-default rounded-2xl shadow-sm w-full max-w-sm p-8">
-
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-content-primary">ParkPass</h1>
+          <h1 className="text-xl font-semibold text-content-primary">
+            ParkPass
+          </h1>
           <p className="text-sm text-content-muted mt-1">Reset your password</p>
         </div>
 
         {submitted ? (
           <div className="text-center">
-            <p className="text-sm text-content-primary font-medium mb-2">Check your email</p>
+            <p className="text-sm text-content-primary font-medium mb-2">
+              Check your email
+            </p>
             <p className="text-sm text-content-muted">
-              {`We've sent a password reset link to`}<span className="text-content-primary">{email}</span>
+              {`We've sent a password reset link to `}
+              <span className="text-content-primary">{email}</span>
             </p>
             <Link
               href="/login"
@@ -62,9 +66,9 @@ export default function ForgotPasswordPage() {
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 className="w-full px-3 py-2.5 text-sm bg-surface-elevated border border-border-default rounded-lg outline-none focus:ring-2 focus:ring-accent focus:border-transparent text-content-primary placeholder:text-content-muted"
               />
             </div>
@@ -76,18 +80,20 @@ export default function ForgotPasswordPage() {
               disabled={isLoading || !email}
               className="w-full py-2.5 text-sm font-medium bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
-              {isLoading ? 'Sending...' : 'Send reset link'}
+              {isLoading ? "Sending..." : "Send reset link"}
             </button>
 
             <p className="text-xs text-content-muted text-center">
-              <Link href="/login" className="text-accent hover:underline cursor-pointer">
+              <Link
+                href="/login"
+                className="text-accent hover:underline cursor-pointer"
+              >
                 Back to sign in
               </Link>
             </p>
           </div>
         )}
-
       </div>
     </div>
-  )
+  );
 }
