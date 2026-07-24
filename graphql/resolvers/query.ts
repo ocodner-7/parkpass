@@ -22,9 +22,6 @@ export const queryResolvers = {
 
     console.log("passesError:", passesError);
 
-    console.log("passes for locations:", passes);
-    console.log("locationIds:", locationIds);
-
     return (
       locations?.map((loc) => ({
         id: loc.id,
@@ -35,8 +32,8 @@ export const queryResolvers = {
         postcode: loc.postcode,
         councilId: loc.council_id,
         householdId: loc.household_id,
-        activePassCount:
-          passes?.filter((p) => p.location_id === loc.id).length ?? 0,
+        activePassCount: passes?.filter((p) => p.location_id === loc.id).length ?? 0,
+        isDefault: loc.is_default,
       })) ?? []
     );
   },
@@ -69,6 +66,7 @@ export const queryResolvers = {
       councilId: location.council_id,
       householdId: location.household_id,
       activePassCount: passes?.length ?? 0,
+      isDefault: location.is_default
     };
   },
   passes: async (

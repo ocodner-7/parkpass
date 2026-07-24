@@ -12,6 +12,7 @@ const GET_LOCATIONS = gql`
       postcode
       councilId
       activePassCount
+      isDefault
     }
   }
 `;

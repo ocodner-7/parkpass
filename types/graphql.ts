@@ -17,6 +17,7 @@ export interface Location {
   householdId: string;
   councilId: string;
   activePassCount: number;
+  isDefault: boolean;
 }
 
 export interface Council {

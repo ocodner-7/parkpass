@@ -11,5 +11,6 @@ export const locationTypeDefs = gql`
     householdId: ID!
     councilId: ID!
     activePassCount: Int!
+    isDefault: Boolean!
   }
 `;

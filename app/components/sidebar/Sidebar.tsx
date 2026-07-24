@@ -2,11 +2,12 @@
 import { useLocationStore } from "@/store/locationStore";
 import { useLocations } from "@/hooks/queries/useLocations";
 import { Location } from "@/types/graphql";
+import { useSetDefaultLocation } from "@/hooks/utils/useSetDefaultLocation";
 import Link from "next/link";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useState } from "react";
 import { AddLocationModal } from "./AddLocationModal";
-import { Trash2 } from "lucide-react";
+import { Trash2, Star, Home } from "lucide-react";
 import { ConfirmDialog } from "@/app/components/ui/ConfirmationDialog";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { AnimatePresence } from "motion/react";
 
 export const Sidebar = () => {
   const { activeLocation, setActiveLocation } = useLocationStore();
+  const { setDefaultLocation } = useSetDefaultLocation();
   const { household: HOUSEHOLD } = useHouseholdStore();
   const { data, isLoading } = useLocations(HOUSEHOLD?.id ?? "");
   const [showModal, setShowModal] = useState(false);
@@ -40,10 +42,10 @@ export const Sidebar = () => {
 
   const locations: Location[] = data?.locations ?? [];
 
-  const { household } = useHouseholdStore();
-  console.log("household in sidebar:", household);
+  const sortedLocations = [...locations].sort(
+    (a, b) => Number(b.isDefault) - Number(a.isDefault),
+  );
 
-  console.log("householdId passed to useLocations:", household?.id);
   return (
     <aside className="w-64 shrink-0 bg-surface-secondary border-r border-border-default flex flex-col h-full">
       <div className="px-5 py-4 border-b border-border-default">
@@ -90,7 +92,7 @@ export const Sidebar = () => {
           </div>
         ) : (
           <ul className="space-y-1 mt-1">
-            {locations.map((location) => {
+            {sortedLocations.map((location) => {
               const isActive = activeLocation?.id === location.id;
 
               return (
@@ -109,11 +111,16 @@ export const Sidebar = () => {
                       onClick={() => setActiveLocation(location)}
                       className="flex-1 text-left cursor-pointer"
                     >
-                      <p
-                        className={`text-sm font-bold truncate ${isActive ? "text-accent" : "text-content-primary"}`}
-                      >
-                        {location.nickname ?? location.addressLine1}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p
+                          className={`text-sm font-medium truncate ${isActive ? "text-accent" : "text-content-primary"}`}
+                        >
+                          {location.nickname ?? location.addressLine1}
+                        </p>
+                        {location.isDefault && (
+                          <Home className="w-3 h-3 text-accent shrink-0" />
+                        )}
+                      </div>
                       <p
                         className={`text-xs font-semibold mt-0.5 ${isActive ? "text-blue-500" : "text-content-muted"}`}
                       >
@@ -128,6 +135,17 @@ export const Sidebar = () => {
                           </span>
                         </p>
                       ) : null}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDefaultLocation(location.id, HOUSEHOLD?.id ?? "");
+                      }}
+                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded hover:bg-surface-elevated transition-all cursor-pointer shrink-0"
+                    >
+                      <Star
+                        className={`w-3.5 h-3.5 ${location.isDefault ? "text-amber-400 fill-amber-400" : "text-content-muted"}`}
+                      />
                     </button>
                     <button
                       onClick={() => setConfirmDeleteLocation(location.id)}
