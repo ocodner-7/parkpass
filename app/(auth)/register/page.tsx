@@ -54,11 +54,12 @@ export default function RegisterPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-content-muted mb-1.5">
+              <label htmlFor="first_name" className="block text-xs font-medium text-content-muted mb-1.5">
                 First name
               </label>
               <input
                 type="text"
+                id="first_name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Jane"
@@ -66,11 +67,12 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-content-muted mb-1.5">
+              <label htmlFor="last_name" className="block text-xs font-medium text-content-muted mb-1.5">
                 Last name
               </label>
               <input
                 type="text"
+                id="last_name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Smith"
@@ -80,11 +82,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="email" className="block text-xs font-medium text-content-muted mb-1.5">
               Email address
             </label>
             <input
               type="email"
+              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -93,12 +96,13 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="password" className="block text-xs font-medium text-content-muted mb-1.5">
               Password{" "}
               <span className="text-content-muted">(min. 6 characters)</span>
             </label>
             <input
               type="password"
+              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
