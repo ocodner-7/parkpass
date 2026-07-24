@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Clock, OctagonX , XCircle } from "lucide-react";
 import { useLocationStore } from "@/store/locationStore";
 import { useActivePasses } from "@/hooks/queries/useActivePasses";
 import { IssuePassModal } from "@/app/components/permits/IssuePassModal";
@@ -21,7 +21,7 @@ const statusConfig = {
   },
   EXPIRED: {
     label: "Expired",
-    icon: CheckCircle,
+    icon: OctagonX,
     className: "bg-surface-elevated text-content-muted",
   },
   CANCELLED: {
