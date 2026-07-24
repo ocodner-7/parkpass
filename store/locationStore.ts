@@ -4,7 +4,8 @@ import { Location } from "@/types/graphql";
 
 interface LocationStore {
   activeLocation: Location | null;
-  setActiveLocation: (location: Location) => void;
+  setActiveLocation: (location: Location | null) => void;
+  clearLocation: () => void;
 }
 
 export const useLocationStore = create<LocationStore>()(
@@ -12,9 +13,10 @@ export const useLocationStore = create<LocationStore>()(
     (set) => ({
       activeLocation: null,
       setActiveLocation: (location) => set({ activeLocation: location }),
+      clearLocation: () => set({ activeLocation: null }),
     }),
     {
-      name: "parkpass-location", // localStorage key
+      name: "parkpass-location",
     },
   ),
 );

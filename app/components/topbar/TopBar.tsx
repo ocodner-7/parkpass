@@ -1,25 +1,17 @@
 "use client";
 import { ChevronDown } from "lucide-react";
-import { User as UserIcon } from "lucide-react";
 import { useState } from "react";
-import { useUser } from "@/hooks/utils/useUser";
 import { useLocationStore } from "@/store/locationStore";
 import { LocationDrawer } from "@/app/components/ui/mobile/LocationDrawer";
 import { AddLocationModal } from "@/app/components/sidebar/AddLocationModal";
 import { AnimatePresence } from "motion/react";
 import { OmniSearch } from "../search/OmniSearch";
+import { AvatarMenu } from "../auth/AvatarMenu";
 
 export const TopBar = () => {
-  const { user } = useUser();
   const { activeLocation } = useLocationStore();
   const [showDrawer, setShowDrawer] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
-
-  const avatar = user ? (
-    `${user.user_metadata?.first_name?.[0]}${user.user_metadata?.last_name?.[0]}`
-  ) : (
-    <UserIcon size={16} />
-  );
 
   return (
     <>
@@ -40,9 +32,7 @@ export const TopBar = () => {
 
         <div className="flex-1 lg:hidden" />
 
-        <div className="w-8 h-8 rounded-full bg-blue-950 border border-border-subtle cursor-default flex items-center justify-center shrink-0">
-          <span className="text-xs font-bold text-blue-300">{avatar}</span>
-        </div>
+        <AvatarMenu />
       </div>
 
       {showDrawer && (
