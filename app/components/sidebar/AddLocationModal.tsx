@@ -128,11 +128,12 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
 
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="nickname" className="block text-xs font-medium text-content-muted mb-1.5">
               Nickname <span className="text-content-muted">(optional)</span>
             </label>
             <input
               type="text"
+              id="nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="e.g. Home, Mum's house"
@@ -141,11 +142,12 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="address_line_1" className="block text-xs font-medium text-content-muted mb-1.5">
               Address line 1 <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
+              id="address_line_1"
               value={addressLine1}
               onChange={(e) => setAddressLine1(e.target.value)}
               placeholder="e.g. 15 Oak Avenue"
@@ -154,11 +156,12 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="address_line_2" className="block text-xs font-medium text-content-muted mb-1.5">
               Address line 2 <span className="text-content-muted">(optional)</span>
             </label>
             <input
               type="text"
+              id="address_line_2"
               value={addressLine2}
               onChange={(e) => setAddressLine2(e.target.value)}
               placeholder="e.g. Flat 4B"
@@ -168,11 +171,12 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-content-muted mb-1.5">
+              <label htmlFor="city" className="block text-xs font-medium text-content-muted mb-1.5">
                 City <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
+                id="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="e.g. London"
@@ -180,13 +184,15 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-content-muted mb-1.5">
+              <label htmlFor="postcode" className="block text-xs font-medium text-content-muted mb-1.5">
                 Postcode <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
+                  id="postcode"
                   value={postcode}
+                  disabled={councils.length === 0}
                   onChange={(e) => setPostcode(e.target.value.toUpperCase())}
                   onBlur={(e) => lookupPostcode(e.target.value)}
                   placeholder="e.g. E5 9RB"
@@ -223,10 +229,11 @@ export function AddLocationModal({ onClose }: AddLocationModalProps) {
           </button>
           <button
             onClick={handleSubmit}
+            name="Save Location"
             disabled={isLoading || !isValid}
             className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
-            {isLoading ? "Adding..." : "Add location"}
+            {isLoading ? "Saving..." : "Save location"}
           </button>
         </div>
       </div>

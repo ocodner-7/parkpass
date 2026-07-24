@@ -149,6 +149,7 @@ export const Sidebar = () => {
                     </button>
                     <button
                       onClick={() => setConfirmDeleteLocation(location.id)}
+                      aria-label="Delete location"
                       className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded cursor-pointer hover:bg-red-100 text-content-secondary hover:text-red-600 transition-all shrink-0"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
