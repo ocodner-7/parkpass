@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 export default function OnboardingPage() {
   const router = useRouter();
   const [householdName, setHouseholdName] = useState("");
+  const [isChecking, setIsChecking] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +15,11 @@ export default function OnboardingPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        setIsChecking(false);
+        return;
+      }
 
       const { data: membership } = await supabase
         .from("household_members")
@@ -22,10 +27,21 @@ export default function OnboardingPage() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (membership) router.push("/dashboard");
+      if (membership) {
+        router.push("/dashboard");
+      } else {
+        setIsChecking(false);
+      }
     };
     check();
   }, [router]);
+
+  if (isChecking)
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-border-default border-t-accent animate-spin" />
+      </div>
+    );
 
   const handleCreateHousehold = async () => {
     if (!householdName.trim()) return;

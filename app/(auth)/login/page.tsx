@@ -36,8 +36,12 @@ export default function LoginPage() {
     <div className="min-h-screen bg-surface-primary flex items-center justify-center">
       <div className="bg-surface-secondary border border-border-default rounded-2xl shadow-sm w-full max-w-sm p-8">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-content-primary">ParkPass</h1>
-          <p className="text-sm text-content-muted mt-1">Sign in to your account</p>
+          <h1 className="text-xl font-semibold text-content-primary">
+            ParkPass
+          </h1>
+          <p className="text-sm text-content-muted mt-1">
+            Sign in to your account
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -66,6 +70,14 @@ export default function LoginPage() {
               className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
+          </div>
+          <div className="flex justify-end mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-xs text-accent hover:underline cursor-pointer"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           {error && <p className="text-xs text-red-500">{error}</p>}
