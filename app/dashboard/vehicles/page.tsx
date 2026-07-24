@@ -20,7 +20,7 @@ function VehicleCard({
   onRemove: (vehicleId: string) => void;
 }) {
   return (
-    <div className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
+    <div data-testid="vehicle-card" className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-lg bg-gray-900 border border-border-default flex items-center justify-center shrink-0">
           <Car className="w-5 h-5 text-content-primary" />
@@ -36,6 +36,7 @@ function VehicleCard({
       </div>
       <button
         onClick={() => onRemove(vehicle.id)}
+        aria-label="Delete vehicle"
         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer"
       >
         <X className="w-4 h-4" />
@@ -115,11 +116,12 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
 
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="registration_plate" className="block text-xs font-medium text-content-muted mb-1.5">
               Registration plate <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
+              id="registration_plate"
               placeholder="e.g. AB12 CDE"
               value={registration}
               onChange={(e) => setRegistration(e.target.value.toUpperCase())}
@@ -128,11 +130,12 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
+            <label htmlFor="nickname" className="block text-xs font-medium text-content-muted mb-1.5">
               Nickname <span className="text-content-muted">(optional)</span>
             </label>
             <input
               type="text"
+              id="nickname"
               placeholder="e.g. Mum's car, Work van"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
@@ -166,7 +169,7 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
             disabled={isLoading || !isValid}
             className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
-            {isLoading ? "Adding vehicle..." : "Add vehicle"}
+            {isLoading ? "Saving vehicle..." : "Save vehicle"}
           </button>
         </div>
       </div>

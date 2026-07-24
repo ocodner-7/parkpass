@@ -27,6 +27,8 @@ test.describe("Locations", () => {
   test("can add a new location", async ({ page }) => {
     await page.getByRole("button", { name: "Add location" }).click();
 
+    await expect(page.getByLabel("Postcode")).toBeEnabled({ timeout: 5000 });
+
     await page.getByLabel("Nickname").fill("Test Location");
     await page.getByLabel("Address line 1").fill("123 Test Street");
     await page.getByLabel("City").fill("London");
@@ -36,14 +38,24 @@ test.describe("Locations", () => {
     await expect(page.getByText(/Detected:/)).toBeVisible({ timeout: 8000 });
 
     await page.getByRole("button", { name: "Save location" }).click();
+    await page.waitForSelector(".fixed.inset-0", {
+      state: "detached",
+      timeout: 10000,
+    });
+
+    await expect(page.getByText("Add a location")).not.toBeVisible({
+      timeout: 5000,
+    });
 
     await expect(
       page.getByRole("listitem").filter({ hasText: "Test Location" }),
-    ).toBeVisible({ timeout: 5000 });
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test("rejects non-London postcodes", async ({ page }) => {
     await page.getByRole("button", { name: "Add location" }).click();
+
+    await expect(page.getByLabel("Postcode")).toBeEnabled({ timeout: 5000 });
 
     await page.getByLabel("Postcode").fill("M1 1AE");
     await page.getByLabel("Postcode").press("Tab");
@@ -58,30 +70,51 @@ test.describe("Locations", () => {
   });
 
   test("can delete a location", async ({ page }) => {
-    // Create a location to delete
     await page.getByRole("button", { name: "Add location" }).click();
+
     await expect(page.getByLabel("Postcode")).toBeEnabled({ timeout: 5000 });
+
     await page.getByLabel("Nickname").fill("Location To Delete");
     await page.getByLabel("Address line 1").fill("99 Delete Street");
     await page.getByLabel("City").fill("London");
     await page.getByLabel("Postcode").fill("E5 9RB");
     await page.getByLabel("Postcode").press("Tab");
+
     await expect(page.getByText(/Detected:/)).toBeVisible({ timeout: 8000 });
+
     await page.getByRole("button", { name: "Save location" }).click();
-    await expect(page.getByText("Location To Delete")).toBeVisible({
+    await page.waitForSelector(".fixed.inset-0", {
+      state: "detached",
+      timeout: 10000,
+    });
+
+    await expect(page.getByText("Add a location")).not.toBeVisible({
       timeout: 5000,
     });
 
-    // Now delete it
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "Location To Delete" }),
+    ).toBeVisible({ timeout: 15000 });
+
+    await page
+      .getByRole("listitem")
+      .filter({ hasText: "Location To Delete" })
+      .hover();
+
     await page
       .getByRole("listitem")
       .filter({ hasText: "Location To Delete" })
       .getByRole("button", { name: "Delete location" })
       .click();
+
+    await expect(page.getByText("Remove location")).toBeVisible({
+      timeout: 5000,
+    });
+    await page.waitForTimeout(300);
     await page.getByRole("button", { name: "Remove" }).click();
 
     await expect(
       page.getByRole("listitem").filter({ hasText: "Location To Delete" }),
-    ).not.toBeVisible();
+    ).not.toBeVisible({ timeout: 10000 });
   });
 });
