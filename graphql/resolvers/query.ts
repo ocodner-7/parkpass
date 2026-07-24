@@ -165,6 +165,7 @@ export const queryResolvers = {
     return {
       id: household.id,
       members: members,
+      name: household.name,
       hoursBalance: household.hours_balance,
       monthlyQuota: household.monthly_quota,
       quotaUsedThisMonth: household.quota_used_this_month,

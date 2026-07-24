@@ -1,13 +1,6 @@
+import { Household } from "@/types/graphql";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-interface Household {
-  id: string;
-  name: string;
-  hoursBalance: number;
-  monthlyQuota: number;
-  quotaUsedThisMonth: number;
-}
 
 interface HouseholdStore {
   household: Household | null;

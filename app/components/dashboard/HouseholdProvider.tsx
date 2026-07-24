@@ -63,6 +63,7 @@ export const HouseholdProvider = ({
         setHousehold({
           id: household.id,
           name: household.name,
+          members: household.members,
           hoursBalance: household.hours_balance,
           monthlyQuota: household.monthly_quota,
           quotaUsedThisMonth: household.quota_used_this_month,

@@ -55,10 +55,12 @@ export interface Pass {
 export interface Household {
   id: string;
   members: User[];
+  name: string;
   hoursBalance: number;
   monthlyQuota: number;
   quotaUsedThisMonth: number;
 }
+
 
 // Response types for each query
 export interface LocationsResponse {
