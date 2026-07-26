@@ -37,7 +37,7 @@ export function LocationDrawer({
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="fixed inset-x-0 bottom-0 z-50 bg-gray-900 rounded-t-2xl shadow-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 bg-surface-secondary rounded-t-2xl shadow-xl lg:hidden"
       >
         <div
           className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
@@ -45,7 +45,7 @@ export function LocationDrawer({
         />
 
         {/* Drawer panel — slides up from bottom */}
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-gray-900 rounded-t-2xl shadow-xl lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-surface-secondary rounded-t-2xl shadow-xl lg:hidden">
           {/* Handle bar */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-gray-300" />
@@ -91,7 +91,7 @@ export function LocationDrawer({
                           onClose();
                         }}
                         className={`w-full text-left flex items-center justify-between px-3 py-3 rounded-xl transition-colors cursor-pointer ${
-                          isActive ? "bg-blue-50" : "hover:bg-surface-primary"
+                          isActive ? "bg-accent-subtle" : "hover:bg-surface-primary"
                         }`}
                       >
                         <div className="flex items-center gap-3">
