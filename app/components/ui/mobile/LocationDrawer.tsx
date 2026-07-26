@@ -21,8 +21,6 @@ export function LocationDrawer({
 
   return (
     <>
-      {/* Backdrop */}
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -46,10 +44,6 @@ export function LocationDrawer({
 
         {/* Drawer panel — slides up from bottom */}
         <div className="fixed inset-x-0 bottom-0 z-50 bg-surface-secondary rounded-t-2xl shadow-xl lg:hidden">
-          {/* Handle bar */}
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-gray-300" />
-          </div>
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-border-default-subtle">
