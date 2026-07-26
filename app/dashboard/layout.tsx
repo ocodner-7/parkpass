@@ -13,7 +13,7 @@ export default function DashboardLayout({
     <HouseholdProvider>
       {/* h-screen: full viewport height */}
       {/* flex: horizontal layout on desktop */}
-      <div className="h-screen flex overflow-hidden bg-surface-primary">
+      <div className="h-dvh flex overflow-hidden bg-surface-primary">
         {/* Sidebar — hidden on mobile, visible on desktop */}
         {/* hidden: display none by default (mobile) */}
         {/* lg:flex: becomes flex on large screens */}
