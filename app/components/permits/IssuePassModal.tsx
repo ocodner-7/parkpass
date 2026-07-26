@@ -127,12 +127,6 @@ export function IssuePassModal({ onClose }: IssuePassModalProps) {
   };
 
   return (
-    // <div className="fixed inset-0 z-50 flex items-center justify-center">
-    // <div
-    //   className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-    //   onClick={onClose}
-    // />
-
     <ModalWrapper onClose={onClose}>
       {/* Modal panel */}
       <div className="relative bg-surface-secondary rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
@@ -194,6 +188,7 @@ export function IssuePassModal({ onClose }: IssuePassModalProps) {
                 {householdVehicles.map((vehicle) => (
                   <button
                     key={vehicle.id}
+                    data-testid="vehicle-option"
                     onClick={() => setSelectedVehicleId(vehicle.id)}
                     className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                       selectedVehicleId === vehicle.id
@@ -208,7 +203,6 @@ export function IssuePassModal({ onClose }: IssuePassModalProps) {
                     </p>
                     {vehicle.nickname && (
                       <p className="text-xs text-content-muted mt-0.5">
-                        {/* {vehicle.registration} */}
                         <NumberPlate registration={vehicle.registration} />
                       </p>
                     )}
