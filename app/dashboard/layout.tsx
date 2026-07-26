@@ -28,7 +28,7 @@ export default function DashboardLayout({
           {/* Scrollable page content */}
           {/* pb-20: bottom padding on mobile to avoid content hiding behind tab bar */}
           {/* lg:pb-0: remove that padding on desktop since no tab bar */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 sm:pb-6 overflow-scroll-non">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 sm:pb-6 overscroll-none">
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
