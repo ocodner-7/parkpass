@@ -8,6 +8,7 @@ import { useCouncil } from "@/hooks/queries/useCouncil";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { BackButton } from "@/app/components/ui/BackButton";
+import { usePurchases } from "@/hooks/queries/usePurchases";
 
 const HOUR_BUNDLES = [5, 10, 20, 50];
 
@@ -25,6 +26,9 @@ export default function TopUpPage() {
   const pricePerHour = councilData?.council?.pricePerHour ?? 150; // pence
   const monthlyQuota = councilData?.council?.monthlyQuotaHours ?? 50;
   const quotaRemaining = monthlyQuota - (household?.quotaUsedThisMonth ?? 0);
+
+  const { data: purchasesData } = usePurchases(HOUSEHOLD?.id ?? "");
+  const purchases = purchasesData?.purchases ?? [];
 
   const handlePurchase = async () => {
     if (!selectedBundle) return;
@@ -65,7 +69,13 @@ export default function TopUpPage() {
       return;
     }
 
+    await supabase.from("purchases").insert({
+      household_id: membership.household_id,
+      hours_purchased: selectedBundle,
+    });
+
     await queryClient.invalidateQueries({ queryKey: ["household"] });
+    await queryClient.invalidateQueries({ queryKey: ["purchases"] });
 
     setPurchased(true);
     setTimeout(() => {
@@ -143,7 +153,9 @@ export default function TopUpPage() {
             return (
               <button
                 key={hours}
-                onClick={() => !exceedsQuota && setSelectedBundle(isSelected ? null : hours)}
+                onClick={() =>
+                  !exceedsQuota && setSelectedBundle(isSelected ? null : hours)
+                }
                 disabled={exceedsQuota}
                 className={`relative p-4 rounded-xl border text-left transition-all ${
                   exceedsQuota
@@ -151,7 +163,7 @@ export default function TopUpPage() {
                     : isSelected
                       ? "border-accent bg-accent-subtle cursor-pointer"
                       : "border-border-default hover:border-accent hover:bg-accent-subtle cursor-pointer"
-                }`} 
+                }`}
               >
                 {isSelected && (
                   <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
@@ -218,6 +230,46 @@ export default function TopUpPage() {
           )}
         </button>
       </div>
+      {purchases.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-medium text-content-primary mb-3">
+            Purchase history
+          </h2>
+          <div className="bg-surface-secondary border border-border-default rounded-xl overflow-hidden">
+            {purchases.map((purchase, index) => (
+              <div
+                key={purchase.id}
+                className={`flex items-center justify-between px-5 py-3 ${
+                  index !== purchases.length - 1
+                    ? "border-b border-border-subtle"
+                    : ""
+                }`}
+              >
+                <div>
+                  <p className="text-sm font-medium text-content-primary">
+                    {purchase.hoursPurchased} hrs purchased
+                  </p>
+                  <p className="text-xs text-content-muted mt-0.5">
+                    {new Date(purchase.createdAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <p className="text-sm font-medium text-content-primary">
+                  £
+                  {(
+                    (purchase.hoursPurchased *
+                      (councilData?.council?.pricePerHour ?? 0)) /
+                    100
+                  ).toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

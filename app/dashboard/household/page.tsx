@@ -101,11 +101,16 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
 
     if (!membership) return;
 
-    const { data: household } = await supabase
+    const { data: members } = await supabase
       .from("household_members")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
+      .select("id")
+      .eq("household_id", membership.household_id);
+
+    if (members && members.length >= 6) {
+      setError("Household is at maximum capacity (6 members)");
+      setIsLoading(false);
+      return;
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -139,7 +144,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
     }
 
     const { error } = await supabase.from("household_members").insert({
-      household_id: household?.household_id,
+      household_id: membership.household_id,
       user_id: profile.id,
       role: "MEMBER",
     });

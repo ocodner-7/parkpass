@@ -1,4 +1,4 @@
-import { Council, Household, Location, Pass, Vehicle } from "@/types/graphql";
+import { Council, Household, Location, Pass, Purchase, Vehicle } from "@/types/graphql";
 import { supabaseServer } from "@/lib/supabase.server";
 
 export const queryResolvers = {
@@ -32,7 +32,8 @@ export const queryResolvers = {
         postcode: loc.postcode,
         councilId: loc.council_id,
         householdId: loc.household_id,
-        activePassCount: passes?.filter((p) => p.location_id === loc.id).length ?? 0,
+        activePassCount:
+          passes?.filter((p) => p.location_id === loc.id).length ?? 0,
         isDefault: loc.is_default,
       })) ?? []
     );
@@ -66,7 +67,7 @@ export const queryResolvers = {
       councilId: location.council_id,
       householdId: location.household_id,
       activePassCount: passes?.length ?? 0,
-      isDefault: location.is_default
+      isDefault: location.is_default,
     };
   },
   passes: async (
@@ -232,5 +233,26 @@ export const queryResolvers = {
       pricePerHour: council.price_per_hour,
       requiresVehicleReg: council.requires_vehicle_reg,
     };
+  },
+  purchases: async (
+    _: unknown,
+    args: { householdId: string },
+  ): Promise<Purchase[]> => {
+    await supabaseServer.rpc("expire_passes");
+
+    const { data: purchases } = await supabaseServer
+      .from("purchases")
+      .select("*")
+      .eq("household_id", args.householdId)
+      .order("created_at", { ascending: false });
+
+    return (
+      purchases?.map((p) => ({
+        id: p.id,
+        householdId: p.household_id,
+        hoursPurchased: p.hours_purchased,
+        createdAt: p.created_at,
+      })) ?? []
+    );
   },
 };

@@ -6,9 +6,9 @@ import { vehicleTypeDefs } from "./schema/vehicle";
 import { passTypeDefs } from "./schema/pass";
 import { mergeTypeDefs } from "@graphql-tools/merge";
 import gql from "graphql-tag";
+import { purchaseTypeDefs } from "./schema/purchase";
 
-
-const queryTypeDefs = gql` 
+const queryTypeDefs = gql`
   type Query {
     locations(householdId: ID!): [Location!]!
     location(locationId: ID!): Location
@@ -18,15 +18,17 @@ const queryTypeDefs = gql`
     councils: [Council!]!
     council(councilId: ID!): Council
     passes(locationId: ID!, householdId: ID!): [Pass!]!
+    purchases(householdId: ID!): [Purchase!]!
   }
 `;
 
 export const typeDefs = mergeTypeDefs([
-    userTypeDefs,
-    householdTypeDefs,
-    locationTypeDefs,
-    councilTypeDefs,
-    vehicleTypeDefs,
-    passTypeDefs,
-    queryTypeDefs
+  userTypeDefs,
+  householdTypeDefs,
+  locationTypeDefs,
+  councilTypeDefs,
+  vehicleTypeDefs,
+  passTypeDefs,
+  purchaseTypeDefs,
+  queryTypeDefs,
 ]);

@@ -8,6 +8,7 @@ import { NumberPlate } from "../components/ui/NumberPlate";
 import { useHouseholdStore } from "@/store/householdStore";
 import { motion } from "motion/react";
 import { useCouncil } from "@/hooks/queries/useCouncil";
+import { usePasses } from "@/hooks/queries/usePasses";
 
 const quickActions = [
   {
@@ -44,7 +45,21 @@ export default function DashboardPage() {
   const { activeLocation } = useLocationStore();
   const { household: HOUSEHOLD } = useHouseholdStore();
 
-  const { data: passesData, isLoading: passesLoading } = useActivePasses(
+  const { data: passesData } = usePasses(
+    activeLocation?.id ?? "",
+    HOUSEHOLD?.id ?? "",
+  );
+
+  const passesThisMonth = (passesData?.passes ?? []).filter((pass) => {
+    const passDate = new Date(pass.startTime);
+    const now = new Date();
+    return (
+      passDate.getMonth() === now.getMonth() &&
+      passDate.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  const { data: activePassesData, isLoading: passesLoading } = useActivePasses(
     activeLocation?.id ?? "",
     HOUSEHOLD?.id ?? "",
   );
@@ -53,13 +68,9 @@ export default function DashboardPage() {
     HOUSEHOLD?.id ?? "",
   );
 
-  console.log("activeLocation council id:", activeLocation?.councilId);
-
   const { data: councilData } = useCouncil(activeLocation?.councilId ?? "");
 
-  console.log("councilData", councilData);
-
-  const activePasses = passesData?.activePasses ?? [];
+  const activePasses = activePassesData?.activePasses ?? [];
   const household = householdData?.household;
 
   const balancePercentage =
@@ -244,7 +255,7 @@ export default function DashboardPage() {
                 Passes this month
               </p>
               <span className="text-3xl font-semibold text-content-primary">
-                {activePasses.length}
+                {passesThisMonth}
               </span>
               {household && (
                 <p className="text-xs text-content-muted mt-1">

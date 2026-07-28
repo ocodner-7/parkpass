@@ -61,6 +61,16 @@ export interface Household {
   quotaUsedThisMonth: number;
 }
 
+export interface Purchase {
+  id: string;
+  householdId: string;
+  hoursPurchased: number;
+  createdAt: string;
+}
+
+export interface PurchasesResponse {
+  purchases: Purchase[];
+}
 
 // Response types for each query
 export interface LocationsResponse {
