@@ -4,6 +4,7 @@ import { useLocations } from "@/hooks/queries/useLocations";
 import { Location } from "@/types/graphql";
 import { useSetDefaultLocation } from "@/hooks/utils/useSetDefaultLocation";
 import Link from "next/link";
+import Image from "next/image";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useState } from "react";
 import { AddLocationModal } from "./AddLocationModal";
@@ -48,15 +49,16 @@ export const Sidebar = () => {
 
   return (
     <aside className="w-64 shrink-0 bg-surface-secondary border-r border-border-default flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-border-default">
-        <Link href="/dashboard">
-          <p className="text-base font-semibold text-content-primary">
-            ParkPass
-          </p>
+      <div className="px-3 py-2 border-b border-border-default">
+        <Link href="/dashboard" className="block w-40">
+          <Image
+            src="/images/logo/logo.png"
+            alt="ParkPass Logo"
+            width={500}
+            height={500}
+            className="w-full h-auto"
+          />
         </Link>
-        <p className="text-xs text-content-muted mt-0.5">
-          London parking permits
-        </p>
       </div>
 
       <div className="px-5 py-3 ">
