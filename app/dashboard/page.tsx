@@ -252,7 +252,7 @@ export default function DashboardPage() {
             {/* Passes this month */}
             <div className="bg-surface-secondary border border-border-default rounded-xl p-5 flex-1">
               <p className="text-xs text-content-muted mb-1">
-                Passes this month
+                Passes used this month
               </p>
               <span className="text-3xl font-semibold text-content-primary">
                 {passesThisMonth}
