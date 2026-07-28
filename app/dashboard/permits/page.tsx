@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, Clock, OctagonX , XCircle } from "lucide-react";
+import { Plus, Clock, OctagonX, XCircle } from "lucide-react";
 import { useLocationStore } from "@/store/locationStore";
 import { useActivePasses } from "@/hooks/queries/useActivePasses";
 import { IssuePassModal } from "@/app/components/permits/IssuePassModal";
@@ -36,38 +36,35 @@ function PassRow({ pass }: { pass: Pass }) {
   const StatusIcon = status.icon;
 
   return (
-    <li className="flex items-center justify-between py-4">
-      <div className="flex items-center gap-4">
-        <div className="shrink-0">
-          <NumberPlate registration={pass.registration} />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-content-primary">
-            {pass.registration}
-          </p>
-          <p className="text-xs text-content-muted mt-0.5">
-            {new Date(pass.startTime).toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            {" - "}
-            {new Date(pass.endTime).toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            {" · "}
-            {new Date(pass.startTime).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-            })}
-          </p>
-        </div>
+    <li className="flex items-center justify-between py-4 gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <NumberPlate
+          registration={pass.registration}
+          className="shrink-0"
+          size="sm"
+        />
+        <p className="text-xs text-content-muted truncate">
+          {new Date(pass.startTime).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+          {" – "}
+          {new Date(pass.endTime).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+          {" · "}
+          {new Date(pass.startTime).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+          })}
+        </p>
       </div>
       <span
-        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${status.className}`}
+        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${status.className}`}
       >
         <StatusIcon className="w-3 h-3" />
-        {status.label}
+        <span className="hidden sm:inline">{status.label}</span>
       </span>
     </li>
   );

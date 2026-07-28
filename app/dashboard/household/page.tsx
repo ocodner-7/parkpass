@@ -51,17 +51,23 @@ function MemberCard({
           <p className="text-xs text-content-muted mt-0.5">{member.email}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 shrink-0">
         <span
-          className={`flex items-center text-content-primary gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${role.className}`}
+          className={`hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${role.className}`}
         >
           <RoleIcon className="w-3 h-3" />
           {role.label}
         </span>
+        <span
+          className={`sm:hidden flex items-center justify-center w-6 h-6 rounded-full ${role.className}`}
+        >
+          <RoleIcon className="w-3 h-3" />
+        </span>
         {!isOwner && (
           <button
             onClick={() => onRemove(member.id)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer"
+            aria-label="Delete member"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
