@@ -166,7 +166,7 @@ export default function DashboardPage() {
                 No active passes for this location
               </p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-border-subtle">
                 {activePasses.map((pass) => (
                   <li
                     key={pass.id}
