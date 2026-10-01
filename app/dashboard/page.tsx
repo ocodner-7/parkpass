@@ -1,271 +1,427 @@
 "use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { motion } from "motion/react";
+import {
+  Car,
+  ChevronRight,
+  MapPin,
+  Plus,
+  Ticket,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
+
+import { NumberPlate } from "../components/ui/NumberPlate";
+import { Card } from "../components/ui/Card";
 import { useLocationStore } from "@/store/locationStore";
+import { useHouseholdStore } from "@/store/householdStore";
 import { useActivePasses } from "@/hooks/queries/useActivePasses";
 import { useHousehold } from "@/hooks/queries/useHousehold";
-import Link from "next/link";
-import { Ticket, Car, Users, Wallet, Plus } from "lucide-react";
-import { NumberPlate } from "../components/ui/NumberPlate";
-import { useHouseholdStore } from "@/store/householdStore";
-import { motion } from "motion/react";
 import { useCouncil } from "@/hooks/queries/useCouncil";
 import { usePasses } from "@/hooks/queries/usePasses";
 
-const quickActions = [
+// Point this straight at the issue flow if it has its own route
+const ISSUE_PASS_HREF = "/dashboard/permits";
+
+const LOW_BALANCE_RATIO = 0.2;
+const ENDING_SOON_MS = 15 * 60 * 1000;
+
+const manageLinks = [
   {
     label: "Permits",
-    description: "Issue and manage",
+    description: "Upcoming and past passes",
     icon: Ticket,
     href: "/dashboard/permits",
-    iconClass: "text-blue-500",
+    chip: "bg-accent/15 text-accent",
   },
   {
     label: "Vehicles",
     description: "Saved registrations",
     icon: Car,
     href: "/dashboard/vehicles",
-    iconClass: "text-red-500",
+    chip: "bg-plate-yellow/15 text-plate-yellow",
   },
   {
     label: "Household",
-    description: "Manage members",
+    description: "Members and access",
     icon: Users,
     href: "/dashboard/household",
-    iconClass: "text-purple-500",
-  },
-  {
-    label: "Top up",
-    description: "Buy more hours",
-    icon: Wallet,
-    href: "/dashboard/topup",
-    iconClass: "text-amber-500",
+    chip: "bg-household/15 text-household",
   },
 ];
 
+const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const shortDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+});
+
+const buttonPrimary =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-control bg-accent-solid px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-solid-hover";
+
+const buttonSecondary =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-control border border-border-strong px-4 text-sm font-medium text-content-primary transition-colors hover:bg-surface-hover";
+
+/** Ticks on an interval so countdowns stay accurate between refetches. */
+function useNow(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
+function formatRemaining(ms: number) {
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m left`;
+  if (minutes === 0) return `${hours}h left`;
+  return `${hours}h ${minutes}m left`;
+}
+
 export default function DashboardPage() {
   const { activeLocation } = useLocationStore();
-  const { household: HOUSEHOLD } = useHouseholdStore();
+  const { household: storedHousehold } = useHouseholdStore();
 
-  const { data: passesData } = usePasses(
-    activeLocation?.id ?? "",
-    HOUSEHOLD?.id ?? "",
-  );
-
-  const passesThisMonth = (passesData?.passes ?? []).filter((pass) => {
-    const passDate = new Date(pass.startTime);
-    const now = new Date();
-    return (
-      passDate.getMonth() === now.getMonth() &&
-      passDate.getFullYear() === now.getFullYear()
-    );
-  }).length;
-
-  const { data: activePassesData, isLoading: passesLoading } = useActivePasses(
-    activeLocation?.id ?? "",
-    HOUSEHOLD?.id ?? "",
-  );
-
-  const { data: householdData, isLoading: householdLoading } = useHousehold(
-    HOUSEHOLD?.id ?? "",
-  );
+  const locationId = activeLocation?.id ?? "";
+  const householdId = storedHousehold?.id ?? "";
 
   const { data: councilData } = useCouncil(activeLocation?.councilId ?? "");
+  const { data: householdData, isLoading: householdLoading } =
+    useHousehold(householdId);
+  const { data: activePassesData, isLoading: activeLoading } =
+    useActivePasses(locationId, householdId);
+  const { data: passesData, isLoading: passesLoading } = usePasses(
+    locationId,
+    householdId,
+  );
 
-  const activePasses = activePassesData?.activePasses ?? [];
   const household = householdData?.household;
 
-  const balancePercentage =
-    ((household?.hoursBalance ?? 0) / (household?.monthlyQuota ?? 1)) * 100;
+  const passesThisMonth = useMemo(() => {
+    const now = new Date();
+    return (passesData?.passes ?? []).filter((pass) => {
+      const start = new Date(pass.startTime);
+      return (
+        start.getMonth() === now.getMonth() &&
+        start.getFullYear() === now.getFullYear()
+      );
+    }).length;
+  }, [passesData]);
 
-  const today = new Date();
-  const resetDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  const resetLabel = resetDate.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
+  if (!activeLocation) return <NoLocationState />;
 
-  const balanceColour =
-    balancePercentage > 50
-      ? "bg-green-500"
-      : balancePercentage > 20
-        ? "bg-amber-500"
-        : "bg-red-500";
+  const subtitle = [councilData?.council?.name, activeLocation.postcode]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <motion.div
-      key={activeLocation?.id}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeInOut" }}
+      key={activeLocation.id}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="mx-auto max-w-6xl"
     >
-      <div className="max-w-6xl mx-auto">
-        {/* Page heading */}
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-content-primary">
-            {activeLocation?.nickname ??
-              activeLocation?.addressLine1 ??
-              "Select a location"}
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-content-primary">
+            {activeLocation.nickname ?? activeLocation.addressLine1}
           </h1>
-          {activeLocation && (
-            <p className="text-sm text-content-muted mt-0.5">
-              {councilData?.council?.name} · {activeLocation?.postcode}
+          {subtitle && (
+            <p className="mt-1 text-sm text-content-secondary">{subtitle}</p>
+          )}
+        </div>
+        <Link href={ISSUE_PASS_HREF} className={`${buttonPrimary} w-full sm:w-auto`}>
+          <Plus className="size-4" aria-hidden />
+          Issue a pass
+        </Link>
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <HoursCard
+          className="lg:col-span-2"
+          loading={householdLoading}
+          balance={household?.hoursBalance ?? 0}
+          quota={household?.monthlyQuota ?? 0}
+          used={household?.quotaUsedThisMonth ?? 0}
+          passesThisMonth={passesThisMonth}
+          passesLoading={passesLoading}
+        />
+        <ActivePassesCard
+          className="lg:col-span-3"
+          loading={activeLoading}
+          passes={activePassesData?.activePasses ?? []}
+        />
+      </div>
+
+      <nav aria-labelledby="manage-heading" className="mt-8">
+        <h2
+          id="manage-heading"
+          className="mb-3 text-sm font-semibold text-content-secondary"
+        >
+          Manage
+        </h2>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {manageLinks.map(({ label, description, icon: Icon, href, chip }) => (
+            <li key={label}>
+              <Link
+                href={href}
+                className="group flex items-center gap-3 rounded-card border border-border-default bg-surface-secondary p-4 transition-colors hover:border-border-strong hover:bg-surface-hover"
+              >
+                <span className={`grid size-10 shrink-0 place-items-center rounded-control ${chip}`}>
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-content-primary">
+                    {label}
+                  </span>
+                  <span className="block truncate text-sm text-content-muted">
+                    {description}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 text-content-muted" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </motion.div>
+  );
+}
+
+type HoursCardProps = {
+  className?: string;
+  loading: boolean;
+  balance: number;
+  quota: number;
+  used: number;
+  passesThisMonth: number;
+  passesLoading: boolean;
+};
+
+function HoursCard({
+  className = "",
+  loading,
+  balance,
+  quota,
+  used,
+  passesThisMonth,
+  passesLoading,
+}: HoursCardProps) {
+  const now = new Date();
+  const resetLabel = shortDateFormatter.format(
+    new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  );
+
+  const usedRatio = quota > 0 ? Math.min(used / quota, 1) : 0;
+  const isEmpty = balance <= 0;
+  const isLow = !isEmpty && quota > 0 && balance / quota <= LOW_BALANCE_RATIO;
+
+  // White fill reads cleanly on sign blue; amber takes over when hours are short
+  const barColour = isLow || isEmpty ? "bg-warning" : "bg-white";
+
+  return (
+    <section
+      aria-labelledby="hours-heading"
+      className={`flex flex-col rounded-card bg-sign-blue p-5 text-white shadow-card ${className}`}
+    >
+      <h2 id="hours-heading" className="text-sm font-medium text-white/80">
+        Hours available
+      </h2>
+
+      {loading ? (
+        <div className="mt-3 space-y-4 pb-6" aria-busy="true">
+          <div className="h-12 w-32 animate-pulse rounded-control bg-white/15" />
+          <div className="h-2 animate-pulse rounded-full bg-white/15" />
+        </div>
+      ) : (
+        <>
+          <p className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-6xl font-bold tracking-tight tabular-nums">
+              {balance}
+            </span>
+            <span className="text-lg font-medium text-white/80">hrs</span>
+          </p>
+
+          {(isLow || isEmpty) && (
+            <p className="mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-black/25 px-3 py-1 text-sm font-medium">
+              <TriangleAlert className="size-4 text-warning" aria-hidden />
+              {isEmpty ? "No hours left" : "Running low"}
             </p>
           )}
-        </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {quickActions.map(
-            ({ label, description, icon: Icon, href, iconClass }) => (
-              <Link
-                key={label}
-                href={href}
-                className="bg-surface-secondary border border-border-default rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all group"
-              >
-                <Icon
-                  className={`w-6 h-6 ${iconClass} group-hover:scale-110 transition-transform`}
-                />
-                <p className="text-sm font-medium text-content-primary mt-3">
-                  {label}
-                </p>
-                <p className="text-xs text-content-muted mt-0.5">
-                  {description}
-                </p>
-              </Link>
-            ),
+          <div className="mt-5 pb-6">
+            <div
+              role="progressbar"
+              aria-label="Monthly allowance used"
+              aria-valuemin={0}
+              aria-valuemax={quota}
+              aria-valuenow={used}
+              className="h-2 overflow-hidden rounded-full bg-white/20"
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-500 ${barColour}`}
+                style={{ width: `${usedRatio * 100}%` }}
+              />
+            </div>
+            <div className="mt-2 flex justify-between text-sm text-white/80">
+              <span className="tabular-nums">
+                {used} of {quota} hrs used
+              </span>
+              <span>Resets {resetLabel}</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="mt-auto flex items-center justify-between gap-4 border-t border-white/15 pt-4">
+        <p className="text-sm text-white/80">
+          {passesLoading ? (
+            <span className="inline-block h-4 w-28 animate-pulse rounded bg-white/15 align-middle" />
+          ) : (
+            <>
+              <span className="font-semibold tabular-nums text-white">
+                {passesThisMonth}
+              </span>{" "}
+              {passesThisMonth === 1 ? "pass" : "passes"} this month
+            </>
+          )}
+        </p>
+        <Link
+          href="/dashboard/topup"
+          className="inline-flex h-10 items-center justify-center rounded-control bg-white px-4 text-sm font-semibold text-sign-blue transition-colors hover:bg-white/90"
+        >
+          Top up
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+type ActivePass = {
+  id: string;
+  registration: string;
+  startTime: string | number | Date;
+  endTime: string | number | Date;
+};
+
+type ActivePassesCardProps = {
+  className?: string;
+  loading: boolean;
+  passes: ActivePass[];
+};
+
+function ActivePassesCard({ className = "", loading, passes }: ActivePassesCardProps) {
+  const now = useNow();
+
+  // Hide passes that expired since the last fetch rather than showing "0m left"
+  const live = passes.filter((pass) => new Date(pass.endTime).getTime() > now);
+
+  return (
+    <Card aria-labelledby="active-heading" className={`p-5 ${className}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 id="active-heading" className="text-base font-semibold text-content-primary">
+            Active passes
+          </h2>
+          {!loading && live.length > 0 && (
+            <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-xs font-medium tabular-nums text-content-secondary">
+              {live.length}
+            </span>
           )}
         </div>
+        <Link
+          href="/dashboard/permits"
+          className="-m-2 rounded-control p-2 text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+        >
+          View all
+        </Link>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3 bg-surface-secondary border border-border-default rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-content-primary">
-                Active passes
-              </h2>
-              <Link
-                href="/dashboard/permits"
-                className="text-xs text-blue-600 hover:underline"
-              >
-                View all
-              </Link>
-            </div>
+      {loading ? (
+        <div className="space-y-3 pt-2" aria-busy="true">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-control bg-surface-elevated" />
+          ))}
+        </div>
+      ) : live.length === 0 ? (
+        <div className="flex flex-col items-center py-10 text-center">
+          <span className="grid size-10 place-items-center rounded-full bg-surface-elevated">
+            <Car className="size-5 text-content-muted" aria-hidden />
+          </span>
+          <p className="mt-3 text-sm font-medium text-content-primary">
+            No visitors parked right now
+          </p>
+          <p className="mt-1 max-w-xs text-sm text-content-muted">
+            Passes you issue for this address will show here while they&apos;re running.
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border-subtle">
+          {live.map((pass) => {
+            const start = new Date(pass.startTime).getTime();
+            const end = new Date(pass.endTime).getTime();
+            const remaining = end - now;
+            const remainingRatio =
+              end > start ? Math.min(Math.max(remaining / (end - start), 0), 1) : 0;
+            const endingSoon = remaining <= ENDING_SOON_MS;
+            const endLabel = timeFormatter.format(end);
 
-            {!activeLocation ? (
-              <p className="text-sm text-content-muted py-4 text-center">
-                Select a location to see active passes
-              </p>
-            ) : passesLoading ? (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
+            return (
+              <li key={pass.id} className="flex items-center gap-4 py-3">
+                <NumberPlate registration={pass.registration} />
+                <div className="min-w-0 flex-1">
                   <div
-                    key={i}
-                    className="h-12 rounded-lg bg-surface-elevated animate-pulse"
-                  />
-                ))}
-              </div>
-            ) : activePasses.length === 0 ? (
-              <p className="text-sm text-content-muted py-4 text-center">
-                No active passes for this location
-              </p>
-            ) : (
-              <ul className="divide-y divide-border-subtle">
-                {activePasses.map((pass) => (
-                  <li
-                    key={pass.id}
-                    className="py-3 flex items-center justify-between"
+                    aria-hidden
+                    className="h-1 overflow-hidden rounded-full bg-surface-elevated"
                   >
-                    <div>
-                      <NumberPlate registration={pass.registration} />
-                      <p className="text-xs text-content-muted mt-0.5">
-                        Ends{" "}
-                        {new Date(pass.endTime).toLocaleTimeString("en-GB", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700">
-                      Active
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <Link
-              href="/dashboard/permits"
-              className="mt-4 w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-gray-300 text-content-secondary hover:border-blue-400 hover:text-blue-600 transition-colors text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Issue a new pass
-            </Link>
-          </div>
-
-          <div className="lg:col-span-2 flex flex-col gap-4">
-            <div className="bg-surface-secondary border border-border-default rounded-xl p-5 flex-1">
-              <p className="text-xs font-semibold text-content-secondary mb-1">
-                Hours balance
-              </p>
-              {householdLoading ? (
-                <div className="h-8 w-24 bg-surface-elevated rounded animate-pulse mt-1" />
-              ) : (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-semibold text-content-primary">
-                      {household?.hoursBalance ?? 0}
-                    </span>
-                    <span className="text-sm text-content-muted">hrs</span>
-                  </div>
-                  <div className="mt-3 h-1.5 rounded-full bg-surface-elevated overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${balanceColour}`}
-                      style={{
-                        width: `${((household?.hoursBalance ?? 0) / (household?.monthlyQuota ?? 1)) * 100}%`,
-                      }}
+                      className={`h-full rounded-full ${endingSoon ? "bg-warning" : "bg-success"}`}
+                      style={{ width: `${remainingRatio * 100}%` }}
                     />
                   </div>
-                </>
-              )}
-            </div>
-
-            <div className="bg-surface-secondary border border-border-default rounded-xl p-5 flex-1">
-              <p className="text-xs font-semibold text-content-secondary mb-1">
-                Monthly quota
-              </p>
-              {householdLoading ? (
-                <div className="h-8 w-24 bg-surface-elevated rounded animate-pulse mt-1" />
-              ) : (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-semibold text-content-primary">
-                      {household?.quotaUsedThisMonth ?? 0}
-                    </span>
-                    <span className="text-sm text-content-muted">
-                      / {household?.monthlyQuota ?? 0} hrs
-                    </span>
-                  </div>
-                  <p className="text-xs text-content-muted mt-1">
-                    {`Resets ${resetLabel}`}
+                  <p className="mt-1.5 text-sm text-content-muted">
+                    {endingSoon ? `Ending soon, at ${endLabel}` : `Until ${endLabel}`}
                   </p>
-                </>
-              )}
-            </div>
-
-            {/* Passes this month */}
-            <div className="bg-surface-secondary border border-border-default rounded-xl p-5 flex-1">
-              <p className="text-xs text-content-muted mb-1">
-                Passes used this month
-              </p>
-              <span className="text-3xl font-semibold text-content-primary">
-                {passesThisMonth}
-              </span>
-              {household && (
-                <p className="text-xs text-content-muted mt-1">
-                  {household.members.length} household members
+                </div>
+                <p
+                  className={`shrink-0 text-sm font-medium tabular-nums ${
+                    endingSoon ? "text-warning" : "text-content-primary"
+                  }`}
+                >
+                  {formatRemaining(remaining)}
                 </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function NoLocationState() {
+  return (
+    <div className="mx-auto flex max-w-sm flex-col items-center py-24 text-center">
+      <span className="grid size-12 place-items-center rounded-full bg-surface-elevated">
+        <MapPin className="size-6 text-content-secondary" aria-hidden />
+      </span>
+      <h1 className="mt-4 text-xl font-semibold text-content-primary">
+        Choose a location
+      </h1>
+      <p className="mt-2 text-sm text-content-muted">
+        Pick an address from the location switcher to see its active passes and
+        hours.
+      </p>
+    </div>
   );
 }

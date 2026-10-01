@@ -1,30 +1,60 @@
 "use client";
-import { useState } from "react";
-import { Plus, X, Crown, User } from "lucide-react";
+
+import { useState, type FormEvent } from "react";
+import {
+  CircleAlert,
+  Crown,
+  Loader2,
+  Plus,
+  User,
+  UserMinus,
+  Users,
+  X,
+} from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useHousehold } from "@/hooks/queries/useHousehold";
 import { User as UserType } from "@/types/graphql";
 import { useHouseholdStore } from "@/store/householdStore";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "@/app/components/ui/ConfirmationDialog";
 import { ModalWrapper } from "@/app/components/ui/ModalWrapper";
-import { AnimatePresence } from "motion/react";
 import { BackButton } from "@/app/components/ui/BackButton";
+
+// Mirrors the capacity check in InviteMemberModal
+const MAX_MEMBERS = 6;
+
+const buttonPrimary =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-control bg-accent-solid px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+const buttonGhost =
+  "inline-flex h-11 items-center justify-center rounded-control px-4 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover hover:text-content-primary";
+
+const cardClass =
+  "rounded-card border border-border-default bg-surface-secondary shadow-card";
+
+const labelClass = "block text-sm font-medium text-content-secondary";
+
+const inputClass =
+  "h-11 w-full rounded-control border border-border-strong bg-surface-primary px-3.5 text-base text-content-primary placeholder:text-content-muted transition-colors focus-visible:outline-none focus:border-accent focus:ring-3 focus:ring-accent/25 aria-invalid:border-danger aria-invalid:focus:ring-danger/25 sm:text-sm";
+
+const modalPanel =
+  "relative mx-4 flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
 
 const roleConfig = {
   OWNER: {
     label: "Owner",
     icon: Crown,
-    className: "bg-yellow-50 text-yellow-700",
+    className: "bg-household/15 text-household",
   },
   MEMBER: {
     label: "Member",
     icon: User,
-    className: "bg-surface-elevated text-content-muted",
+    className: "bg-surface-elevated text-content-secondary",
   },
 };
 
-function MemberCard({
+function MemberRow({
   member,
   onRemove,
 }: {
@@ -34,46 +64,46 @@ function MemberCard({
   const role = roleConfig[member.role];
   const RoleIcon = role.icon;
   const isOwner = member.role === "OWNER";
+  const fullName = `${member.firstName} ${member.lastName}`;
 
   return (
-    <div className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-          <span className="text-sm font-medium text-blue-700">
-            {member.firstName[0]}
-            {member.lastName[0]}
-          </span>
-        </div>
-        <div>
-          <p className="text-sm font-medium text-content-primary">
-            {member.firstName} {member.lastName}
-          </p>
-          <p className="text-xs text-content-muted mt-0.5">{member.email}</p>
-        </div>
+    <li className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5">
+      <span
+        aria-hidden
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-household/15 text-sm font-semibold text-household"
+      >
+        {member.firstName[0]}
+        {member.lastName[0]}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-content-primary">
+          {fullName}
+        </p>
+        <p className="truncate text-sm text-content-muted">{member.email}</p>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <span
-          className={`hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${role.className}`}
+
+      <span
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${role.className}`}
+      >
+        <RoleIcon className="size-3.5" aria-hidden />
+        <span className="sr-only sm:not-sr-only">{role.label}</span>
+      </span>
+
+      {/* Keeps rows aligned when the owner has no remove button */}
+      {isOwner ? (
+        <span className="size-10 shrink-0" aria-hidden />
+      ) : (
+        <button
+          type="button"
+          onClick={() => onRemove(member.id)}
+          aria-label={`Remove ${fullName}`}
+          className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-control text-content-muted transition-colors hover:bg-danger-subtle hover:text-danger"
         >
-          <RoleIcon className="w-3 h-3" />
-          {role.label}
-        </span>
-        <span
-          className={`sm:hidden flex items-center justify-center w-6 h-6 rounded-full ${role.className}`}
-        >
-          <RoleIcon className="w-3 h-3" />
-        </span>
-        {!isOwner && (
-          <button
-            onClick={() => onRemove(member.id)}
-            aria-label="Delete member"
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-    </div>
+          <UserMinus className="size-4" aria-hidden />
+        </button>
+      )}
+    </li>
   );
 }
 
@@ -85,13 +115,21 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
 
   const isValid = email.includes("@") && email.includes(".");
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!isValid) return;
+    setError("");
+    setIsLoading(true);
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      setError("Your session has expired. Sign in again to continue.");
+      setIsLoading(false);
+      return;
+    }
 
     const { data: membership } = await supabase
       .from("household_members")
@@ -99,15 +137,19 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!membership) return;
+    if (!membership) {
+      setError("We couldn't find your household. Refresh and try again.");
+      setIsLoading(false);
+      return;
+    }
 
     const { data: members } = await supabase
       .from("household_members")
       .select("id")
       .eq("household_id", membership.household_id);
 
-    if (members && members.length >= 6) {
-      setError("Household is at maximum capacity (6 members)");
+    if (members && members.length >= MAX_MEMBERS) {
+      setError(`Your household is full. It can have up to ${MAX_MEMBERS} members.`);
       setIsLoading(false);
       return;
     }
@@ -119,13 +161,13 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
       .single();
 
     if (!profile) {
-      setError("No user found with that email");
+      setError("No ParkPass account uses that email. Ask them to sign up first.");
       setIsLoading(false);
       return;
     }
 
     if (profile.id === user.id) {
-      setError("You can't invite yourself");
+      setError("That's your own email address.");
       setIsLoading(false);
       return;
     }
@@ -138,7 +180,7 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
       .maybeSingle();
 
     if (existingMember) {
-      setError("This person is already in your household");
+      setError("This person is already in your household.");
       setIsLoading(false);
       return;
     }
@@ -150,7 +192,12 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
     });
 
     if (error) {
-      setError(error.message);
+      // 23505 = unique violation: they're already in another household
+      setError(
+        error.code === "23505"
+          ? "This person already belongs to another household."
+          : error.message,
+      );
       setIsLoading(false);
       return;
     }
@@ -161,54 +208,85 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalWrapper onClose={onClose}>
-      <div className="relative bg-surface-secondary rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-default-subtle">
-          <h2 className="text-base font-semibold text-content-primary">
-            Invite a member
+      <form
+        onSubmit={handleSubmit}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-title"
+        className={`${modalPanel} max-w-md`}
+      >
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 sm:px-6">
+          <h2
+            id="invite-title"
+            className="text-lg font-semibold tracking-tight text-content-primary"
+          >
+            Add a member
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"
+            aria-label="Close"
+            className="-mr-2 grid size-9 cursor-pointer place-items-center rounded-control text-content-muted transition-colors hover:bg-surface-hover hover:text-content-primary"
           >
-            <X className="w-4 h-4 text-content-muted" />
+            <X className="size-5" aria-hidden />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
-          <p className="text-sm text-content-muted">
-            {`They'll receive an email invite to join your household. Once accepted they'll be able to issue passes.`}
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+          <p className="text-sm text-content-secondary">
+            They&apos;ll share your household&apos;s hours and can issue passes
+            straight away. They need a ParkPass account first.
           </p>
-          <div>
-            <label className="block text-xs font-medium text-content-muted mb-1.5">
-              Email address <span className="text-red-400">*</span>
+
+          <div className="space-y-1.5">
+            <label htmlFor="invite_email" className={labelClass}>
+              Email address
             </label>
             <input
+              id="invite_email"
               type="email"
-              placeholder="e.g. jane@example.com"
+              inputMode="email"
+              autoComplete="off"
+              required
+              placeholder="jane@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? "invite-error" : undefined}
+              className={inputClass}
             />
           </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          {error && (
+            <div
+              id="invite-error"
+              role="alert"
+              className="flex gap-2.5 rounded-control bg-danger-subtle px-3.5 py-3 text-sm text-danger"
+            >
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>{error}</p>
+            </div>
+          )}
         </div>
 
-        <div className="px-6 py-4 border-t border-border-default-subtle flex justify-end gap-3 bg-surface-secondary">
+        <div className="flex justify-end gap-2 border-t border-border-subtle bg-surface-secondary px-5 py-4 sm:px-6">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-content hover:text-content-primary transition-colors cursor-pointer"
+            className={`${buttonGhost} cursor-pointer`}
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={isLoading || !isValid}
-            className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className={`${buttonPrimary} cursor-pointer`}
           >
-            {isLoading ? "Sending invite..." : "Send invite"}
+            {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            {isLoading ? "Adding…" : "Add member"}
           </button>
         </div>
-      </div>
+      </form>
     </ModalWrapper>
   );
 }
@@ -216,18 +294,35 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
 export default function HouseholdPage() {
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
   const { household: HOUSEHOLD } = useHouseholdStore();
   const { data, isLoading } = useHousehold(HOUSEHOLD?.id ?? "");
   const queryClient = useQueryClient();
 
   const household = data?.household;
   const members = household?.members ?? [];
+  const isFull = members.length >= MAX_MEMBERS;
+  const memberPendingRemoval = members.find((m) => m.id === confirmDelete);
+
+  const closeRemoveDialog = () => {
+    setConfirmDelete(null);
+    setRemoveError("");
+  };
 
   const handleRemoveMember = async (userId: string) => {
+    setIsRemoving(true);
+    setRemoveError("");
+
+    const fail = (message: string) => {
+      setRemoveError(message);
+      setIsRemoving(false);
+    };
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return fail("Your session has expired. Sign in again to continue.");
 
     const { data: membership } = await supabase
       .from("household_members")
@@ -235,7 +330,7 @@ export default function HouseholdPage() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!membership) return;
+    if (!membership) return fail("We couldn't find your household. Refresh and try again.");
 
     const { error } = await supabase
       .from("household_members")
@@ -245,61 +340,91 @@ export default function HouseholdPage() {
 
     if (error) {
       console.error("Error removing member:", error);
-      return;
+      return fail("We couldn't remove them. Please try again.");
     }
 
     await queryClient.invalidateQueries({ queryKey: ["household"] });
-    setConfirmDelete(null);
+    setIsRemoving(false);
+    closeRemoveDialog();
   };
 
   return (
     <>
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto max-w-3xl pb-8">
         <BackButton />
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-content-primary">
-              Household
-            </h1>
-            <p className="text-sm text-content-muted mt-0.5">
-              {members.length} {members.length === 1 ? "member" : "members"}
-            </p>
+
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-control bg-household/15 text-household">
+              <Users className="size-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-semibold tracking-tight text-content-primary">
+                {household?.name ?? "Household"}
+              </h1>
+              <p className="text-sm text-content-secondary">
+                {isLoading ? (
+                  "Loading members…"
+                ) : (
+                  <>
+                    <span className="tabular-nums">
+                      {members.length} of {MAX_MEMBERS}
+                    </span>{" "}
+                    members{isFull && ", household is full"}
+                  </>
+                )}
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            disabled={isFull}
+            className={`${buttonPrimary} w-full cursor-pointer sm:w-auto`}
           >
-            <Plus className="w-4 h-4" />
-            Invite member
+            <Plus className="size-4" aria-hidden />
+            Add a member
           </button>
-        </div>
+        </header>
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-20 rounded-xl bg-surface-elevated animate-pulse"
-              />
+          <ul className={`${cardClass} divide-y divide-border-subtle`} aria-busy="true">
+            {[0, 1].map((i) => (
+              <li key={i} className="flex items-center gap-4 px-4 py-4 sm:px-5">
+                <div className="size-10 animate-pulse rounded-full bg-surface-elevated" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 animate-pulse rounded bg-surface-elevated" />
+                  <div className="h-3.5 w-44 animate-pulse rounded bg-surface-elevated" />
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : members.length === 0 ? (
-          <div className="bg-surface-primary border border-border-default rounded-xl p-12 text-center">
-            <User className="w-8 h-8 text-content-secondary mx-auto mb-3" />
-            <p className="text-sm text-content-muted">No members yet</p>
+          <div className={`${cardClass} flex flex-col items-center px-6 py-14 text-center`}>
+            <span className="grid size-10 place-items-center rounded-full bg-household/15">
+              <Users className="size-5 text-household" aria-hidden />
+            </span>
+            <p className="mt-3 text-sm font-medium text-content-primary">
+              No members yet
+            </p>
+            <p className="mt-1 max-w-xs text-sm text-content-muted">
+              Add people you live with so they can issue passes from your
+              household&apos;s hours.
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <ul className={`${cardClass} divide-y divide-border-subtle`}>
             {members.map((member) => (
-              <MemberCard
+              <MemberRow
                 key={member.id}
                 member={member}
                 onRemove={(id) => setConfirmDelete(id)}
               />
             ))}
-          </div>
+          </ul>
         )}
       </div>
+
       <AnimatePresence>
         {showModal && <InviteMemberModal onClose={() => setShowModal(false)} />}
       </AnimatePresence>
@@ -307,11 +432,17 @@ export default function HouseholdPage() {
       <AnimatePresence>
         {confirmDelete && (
           <ConfirmDialog
-            title="Remove member"
-            message="Are you sure you want to remove this member? This can't be undone."
+            title={
+              memberPendingRemoval
+                ? `Remove ${memberPendingRemoval.firstName}?`
+                : "Remove member?"
+            }
+            message="They'll lose access to this household's hours and won't be able to issue passes. You can add them again later."
             confirmLabel="Remove"
             onConfirm={() => handleRemoveMember(confirmDelete)}
-            onCancel={() => setConfirmDelete(null)}
+            onCancel={closeRemoveDialog}
+            isLoading={isRemoving}
+            error={removeError}
           />
         )}
       </AnimatePresence>

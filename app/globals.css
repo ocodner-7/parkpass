@@ -1,4 +1,4 @@
-@import "tailwindcss";
+/* @import "tailwindcss";
 
 @font-face {
   font-family: "UK Number Plate";
@@ -29,4 +29,89 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+} */
+
+@import "tailwindcss";
+
+@font-face {
+  font-family: "UK Number Plate";
+  src: url("/fonts/UKNumberPlate.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Asphalt neutrals: cool and slightly blue, so surfaces and text share one temperature */
+  --color-surface-primary: #0f1217;
+  --color-surface-secondary: #161a21;
+  --color-surface-elevated: #1f242d;
+  --color-surface-hover: #1b2028;
+
+  --color-border-subtle: #20252d;
+  --color-border-default: #2a303a;
+  --color-border-strong: #3a414d;
+
+  /* All three pass WCAG AA (4.5:1+) on secondary and elevated surfaces */
+  --color-content-primary: #e8ecf2;
+  --color-content-secondary: #a7afbc;
+  --color-content-muted: #8a93a1;
+
+  /* Parking-sign blue. `accent` is for text/icons on dark; `accent-solid` is for
+     filled buttons with white text (5.6:1). */
+  --color-accent: #7fa9ec;
+  --color-accent-hover: #9dbdf1;
+  --color-accent-solid: #2563c9;
+  --color-accent-solid-hover: #2f6fd8;
+  --color-accent-subtle: #15253f;
+
+  /* UK parking-sign blue: the hours card is styled as the sign itself.
+     White text on it is 6.6:1. */
+  --color-sign-blue: #1e5bb0;
+
+  /* Section hues, used consistently wherever a section is represented
+     (nav, icon chips, page headers): permits = accent, vehicles = plate
+     yellow, household = teal */
+  --color-household: #4cc4b4;
+
+  /* Plate colours: number plates, and the vehicles section */
+  --color-plate-yellow: #f8d32a;
+  --color-plate-white: #f4f4f0;
+
+  --color-success: #4cc27a;
+  --color-success-subtle: #10261b;
+  --color-warning: #e3a73b;
+  --color-warning-subtle: #2b2112;
+  --color-danger: #f26b63;
+  --color-danger-subtle: #2d1617;
+  /* Filled destructive buttons with white text (5.1:1); plain danger is for text */
+  --color-danger-solid: #c93a33;
+  --color-danger-solid-hover: #d6453e;
+
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
+
+  /* Drop shadows vanish on dark UIs; a faint top highlight gives cards an edge instead */
+  --shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.03);
+
+  --font-plate: "UK Number Plate", ui-monospace, monospace;
+}
+
+@theme inline {
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-surface-primary font-sans text-content-primary antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }

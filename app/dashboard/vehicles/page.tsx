@@ -1,18 +1,43 @@
 "use client";
-import { useState } from "react";
-import { Plus, X, Car } from "lucide-react";
+
+import { useState, type FormEvent } from "react";
+import { Car, CircleAlert, Loader2, Plus, Trash2, X } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Vehicle } from "@/types/graphql";
 import { NumberPlate } from "@/app/components/ui/NumberPlate";
 import { useHouseholdStore } from "@/store/householdStore";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import { useVehicles } from "@/hooks/queries/useVehicles";
 import { ConfirmDialog } from "@/app/components/ui/ConfirmationDialog";
 import { ModalWrapper } from "@/app/components/ui/ModalWrapper";
-import { AnimatePresence } from "motion/react";
 import { BackButton } from "@/app/components/ui/BackButton";
 
-function VehicleCard({
+const buttonPrimary =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-control bg-accent-solid px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+const buttonSecondary =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-control border border-border-strong px-4 text-sm font-medium text-content-primary transition-colors hover:bg-surface-hover";
+
+const buttonGhost =
+  "inline-flex h-11 items-center justify-center rounded-control px-4 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover hover:text-content-primary";
+
+const cardClass =
+  "rounded-card border border-border-default bg-surface-secondary shadow-card";
+
+const labelClass = "block text-sm font-medium text-content-secondary";
+
+const inputClass =
+  "h-11 w-full rounded-control border border-border-strong bg-surface-primary px-3.5 text-base text-content-primary placeholder:text-content-muted transition-colors focus-visible:outline-none focus:border-accent focus:ring-3 focus:ring-accent/25 aria-invalid:border-danger aria-invalid:focus:ring-danger/25 sm:text-sm";
+
+// Same plate-style input as IssuePassModal
+const plateInputClass =
+  "h-14 w-full rounded-control border-2 border-black/80 bg-plate-yellow px-4 text-center font-plate text-2xl uppercase tracking-widest text-neutral-950 placeholder:text-neutral-950/35 focus-visible:outline-none focus:ring-3 focus:ring-accent";
+
+const modalPanel =
+  "relative mx-4 flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
+
+function VehicleRow({
   vehicle,
   onRemove,
 }: {
@@ -20,28 +45,29 @@ function VehicleCard({
   onRemove: (vehicleId: string) => void;
 }) {
   return (
-    <div data-testid="vehicle-card" className="bg-surface-secondary border border-border-default rounded-xl p-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-gray-900 border border-border-default flex items-center justify-center shrink-0">
-          <Car className="w-5 h-5 text-content-primary" />
-        </div>
-        <div className="flex gap-4 items-center">
-          <NumberPlate registration={vehicle.registration} />
-          {vehicle.nickname && (
-            <p className="text-sm font-bold text-content-primary">
-              {vehicle.nickname}
-            </p>
-          )}
-        </div>
-      </div>
-      <button
-        onClick={() => onRemove(vehicle.id)}
-        aria-label="Delete vehicle"
-        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors cursor-pointer"
+    <li
+      data-testid="vehicle-card"
+      className="flex items-center gap-4 px-4 py-4 sm:px-5"
+    >
+      <NumberPlate registration={vehicle.registration} className="shrink-0" />
+      <p
+        className={`min-w-0 flex-1 truncate text-sm ${
+          vehicle.nickname
+            ? "font-medium text-content-primary"
+            : "text-content-muted"
+        }`}
       >
-        <X className="w-4 h-4" />
+        {vehicle.nickname ?? "No nickname"}
+      </p>
+      <button
+        type="button"
+        onClick={() => onRemove(vehicle.id)}
+        aria-label={`Remove ${vehicle.registration}`}
+        className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-control text-content-muted transition-colors hover:bg-danger-subtle hover:text-danger"
+      >
+        <Trash2 className="size-4" aria-hidden />
       </button>
-    </div>
+    </li>
   );
 }
 
@@ -54,9 +80,9 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
 
   const queryClient = useQueryClient();
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!isValid) return;
-    console.log("Adding vehicle:", { registration, nickname });
     setIsLoading(true);
     setError("");
 
@@ -65,7 +91,7 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      setError("Not authenticated");
+      setError("Your session has expired. Sign in again to continue.");
       setIsLoading(false);
       return;
     }
@@ -77,7 +103,7 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
       .maybeSingle();
 
     if (!membership) {
-      setError("No household found");
+      setError("You need to set up a household before adding vehicles.");
       setIsLoading(false);
       return;
     }
@@ -101,78 +127,97 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalWrapper onClose={onClose}>
-      <div className="relative bg-surface-secondary rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-default-subtle">
-          <h2 className="text-base font-semibold text-content-primary">
+      <form
+        onSubmit={handleSubmit}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-vehicle-title"
+        className={`${modalPanel} max-w-md`}
+      >
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 sm:px-6">
+          <h2
+            id="add-vehicle-title"
+            className="text-lg font-semibold tracking-tight text-content-primary"
+          >
             Add a vehicle
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"
+            aria-label="Close"
+            className="-mr-2 grid size-9 cursor-pointer place-items-center rounded-control text-content-muted transition-colors hover:bg-surface-hover hover:text-content-primary"
           >
-            <X className="w-4 h-4 text-content-muted" />
+            <X className="size-5" aria-hidden />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <label htmlFor="registration_plate" className="block text-xs font-medium text-content-muted mb-1.5">
-              Registration plate <span className="text-red-400">*</span>
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="space-y-1.5">
+            <label htmlFor="registration_plate" className={labelClass}>
+              Registration
             </label>
+            {/* The input is styled as the plate itself, so it doubles as the preview */}
             <input
-              type="text"
               id="registration_plate"
-              placeholder="e.g. AB12 CDE"
+              type="text"
+              required
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder="AB12 CDE"
               value={registration}
               onChange={(e) => setRegistration(e.target.value.toUpperCase())}
-              className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? "add-vehicle-error" : undefined}
+              className={plateInputClass}
             />
           </div>
 
-          <div>
-            <label htmlFor="nickname" className="block text-xs font-medium text-content-muted mb-1.5">
-              Nickname <span className="text-content-muted">(optional)</span>
+          <div className="space-y-1.5">
+            <label htmlFor="nickname" className={labelClass}>
+              Nickname{" "}
+              <span className="font-normal text-content-muted">(optional)</span>
             </label>
             <input
-              type="text"
               id="nickname"
-              placeholder="e.g. Mum's car, Work van"
+              type="text"
+              placeholder="e.g. Mum's car or Work van"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
           </div>
 
-          {registration && (
-            <div className="pt-1">
-              <p className="text-xs text-content-muted mb-2">Preview</p>
-              <span
-                style={{ fontFamily: "'UK Number Plate', sans-serif" }}
-                className="inline-block px-3 py-1 bg-yellow-400 text-black text-sm rounded border-2 border-yellow-600 tracking-wider"
-              >
-                {registration}
-              </span>
+          {error && (
+            <div
+              id="add-vehicle-error"
+              role="alert"
+              className="flex gap-2.5 rounded-control bg-danger-subtle px-3.5 py-3 text-sm text-danger"
+            >
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>{error}</p>
             </div>
           )}
-          {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
 
-        <div className="px-6 py-4 border-t border-border-default-subtle flex justify-end gap-3 bg-surface-secondary">
+        <div className="flex justify-end gap-2 border-t border-border-subtle bg-surface-secondary px-5 py-4 sm:px-6">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-content-muted hover:text-content-primary transition-colors cursor-pointer"
+            className={`${buttonGhost} cursor-pointer`}
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={isLoading || !isValid}
-            className="px-5 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className={`${buttonPrimary} cursor-pointer`}
           >
-            {isLoading ? "Saving vehicle..." : "Save vehicle"}
+            {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            {isLoading ? "Saving…" : "Save vehicle"}
           </button>
         </div>
-      </div>
+      </form>
     </ModalWrapper>
   );
 }
@@ -180,78 +225,110 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
 export default function VehiclesPage() {
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
   const { household: HOUSEHOLD } = useHouseholdStore();
   const { data, isLoading } = useVehicles(HOUSEHOLD?.id ?? "");
   const queryClient = useQueryClient();
   const vehicles = data?.vehicles ?? [];
 
+  const vehiclePendingRemoval = vehicles.find((v) => v.id === confirmDelete);
+
+  const closeRemoveDialog = () => {
+    setConfirmDelete(null);
+    setRemoveError("");
+  };
+
   const handleVehicleRemove = async (vehicleId: string) => {
+    setIsRemoving(true);
+    setRemoveError("");
+
     const { error } = await supabase
       .from("vehicles")
       .delete()
       .eq("id", vehicleId);
 
+    setIsRemoving(false);
+
     if (error) {
-      console.log("Error removing vehicle:", error);
+      console.error("Error removing vehicle:", error);
+      setRemoveError("We couldn't remove that vehicle. Please try again.");
       return;
     }
 
     await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-    setConfirmDelete(null);
+    closeRemoveDialog();
   };
 
   return (
     <>
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto max-w-3xl pb-8">
         <BackButton />
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-content-primary">
-              Vehicles
-            </h1>
-            <p className="text-sm text-content-muted mt-0.5">
-              Saved vehicles for your household
-            </p>
+
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-control bg-plate-yellow/15 text-plate-yellow">
+              <Car className="size-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-content-primary">
+                Vehicles
+              </h1>
+              <p className="text-sm text-content-secondary">
+                Saved registrations make issuing passes quicker.
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+            className={`${buttonPrimary} w-full cursor-pointer sm:w-auto`}
           >
-            <Plus className="w-4 h-4" />
-            Add vehicle
+            <Plus className="size-4" aria-hidden />
+            Add a vehicle
           </button>
-        </div>
+        </header>
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-20 rounded-xl bg-surface-elevated animate-pulse"
-              />
+          <ul className={`${cardClass} divide-y divide-border-subtle`} aria-busy="true">
+            {[0, 1].map((i) => (
+              <li key={i} className="flex items-center gap-4 px-4 py-4 sm:px-5">
+                <div className="h-9 w-28 animate-pulse rounded-md bg-surface-elevated" />
+                <div className="h-4 w-24 animate-pulse rounded bg-surface-elevated" />
+              </li>
             ))}
-          </div>
+          </ul>
         ) : vehicles.length === 0 ? (
-          <div className="bg-surface-secondary border border-border-default rounded-xl p-12 text-center">
-            <Car className="w-8 h-8 text-content-secondary mx-auto mb-3" />
-            <p className="text-sm text-content-muted">No vehicles saved yet</p>
+          <div className={`${cardClass} flex flex-col items-center px-6 py-14 text-center`}>
+            <span className="grid size-10 place-items-center rounded-full bg-plate-yellow/15">
+              <Car className="size-5 text-plate-yellow" aria-hidden />
+            </span>
+            <p className="mt-3 text-sm font-medium text-content-primary">
+              No saved vehicles yet
+            </p>
+            <p className="mt-1 max-w-xs text-sm text-content-muted">
+              Save the cars your visitors use most, then pick them in one tap
+              when issuing a pass.
+            </p>
             <button
+              type="button"
               onClick={() => setShowModal(true)}
-              className="mt-3 text-sm text-blue-600 hover:underline"
+              className={`${buttonSecondary} mt-5 cursor-pointer`}
             >
-              Add your first vehicle
+              <Plus className="size-4" aria-hidden />
+              Add a vehicle
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <ul className={`${cardClass} divide-y divide-border-subtle`}>
             {vehicles.map((vehicle) => (
-              <VehicleCard
+              <VehicleRow
                 key={vehicle.id}
                 vehicle={vehicle}
                 onRemove={(id) => setConfirmDelete(id)}
               />
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
@@ -262,11 +339,17 @@ export default function VehiclesPage() {
       <AnimatePresence>
         {confirmDelete && (
           <ConfirmDialog
-            title="Remove vehicle"
-            message="Are you sure you want to remove this vehicle? This can't be undone."
+            title={
+              vehiclePendingRemoval
+                ? `Remove ${vehiclePendingRemoval.registration}?`
+                : "Remove vehicle?"
+            }
+            message="It will no longer appear in your saved vehicles. Passes already issued to it won't be affected."
             confirmLabel="Remove"
             onConfirm={() => handleVehicleRemove(confirmDelete)}
-            onCancel={() => setConfirmDelete(null)}
+            onCancel={closeRemoveDialog}
+            isLoading={isRemoving}
+            error={removeError}
           />
         )}
       </AnimatePresence>

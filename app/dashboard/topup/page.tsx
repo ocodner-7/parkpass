@@ -1,20 +1,42 @@
 "use client";
+
 import { useState } from "react";
-import { Wallet, Check } from "lucide-react";
+import { Check, CircleAlert, Loader2, Receipt, Wallet } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useHousehold } from "@/hooks/queries/useHousehold";
 import { useLocationStore } from "@/store/locationStore";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useCouncil } from "@/hooks/queries/useCouncil";
-import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
-import { BackButton } from "@/app/components/ui/BackButton";
 import { usePurchases } from "@/hooks/queries/usePurchases";
+import { supabase } from "@/lib/supabase";
+import { BackButton } from "@/app/components/ui/BackButton";
 
 const HOUR_BUNDLES = [5, 10, 20, 50];
+const RECENT_PURCHASES = 5;
+
+const buttonPrimary =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-control bg-accent-solid px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+const cardClass =
+  "rounded-card border border-border-default bg-surface-secondary shadow-card";
+
+const gbp = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+});
+
+const purchaseDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 
 export default function TopUpPage() {
   const [selectedBundle, setSelectedBundle] = useState<number | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchased, setPurchased] = useState(false);
+  const [showAllPurchases, setShowAllPurchases] = useState(false);
+  const [purchaseError, setPurchaseError] = useState("");
 
   const { activeLocation } = useLocationStore();
   const { household: HOUSEHOLD } = useHouseholdStore();
@@ -25,251 +47,322 @@ export default function TopUpPage() {
   const { data: councilData } = useCouncil(activeLocation?.councilId ?? "");
   const pricePerHour = councilData?.council?.pricePerHour ?? 150; // pence
   const monthlyQuota = councilData?.council?.monthlyQuotaHours ?? 50;
-  const quotaRemaining = monthlyQuota - (household?.quotaUsedThisMonth ?? 0);
+  const usedThisMonth = household?.quotaUsedThisMonth ?? 0;
 
   const { data: purchasesData } = usePurchases(HOUSEHOLD?.id ?? "");
   const purchases = purchasesData?.purchases ?? [];
+  const visiblePurchases = showAllPurchases
+    ? purchases
+    : purchases.slice(0, RECENT_PURCHASES);
 
   const handlePurchase = async () => {
-    if (!selectedBundle) return;
+    if (!selectedBundle || isPurchasing) return;
+    setIsPurchasing(true);
+    setPurchaseError("");
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) return;
+      if (!user) {
+        setPurchaseError("Your session has expired. Sign in again to continue.");
+        return;
+      }
 
-    const { data: membership } = await supabase
-      .from("household_members")
-      .select("household_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      const { data: membership } = await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (!membership) return;
+      if (!membership) {
+        setPurchaseError("We couldn't find your household. Refresh and try again.");
+        return;
+      }
 
-    const { data: household } = await supabase
-      .from("households")
-      .select("hours_balance, quota_used_this_month")
-      .eq("id", membership.household_id)
-      .single();
+      const { data: household } = await supabase
+        .from("households")
+        .select("hours_balance")
+        .eq("id", membership.household_id)
+        .single();
 
-    if (!household) return;
+      if (!household) {
+        setPurchaseError("We couldn't find your household. Refresh and try again.");
+        return;
+      }
 
-    const { error } = await supabase
-      .from("households")
-      .update({
-        hours_balance: household.hours_balance + selectedBundle!,
-        quota_used_this_month:
-          household.quota_used_this_month + selectedBundle!,
-      })
-      .eq("id", membership.household_id);
+      const { error } = await supabase
+        .from("households")
+        // Bought hours only add to this month's balance. They don't count as
+        // used, and they expire with the monthly reset like the allowance.
+        .update({
+          hours_balance: household.hours_balance + selectedBundle,
+        })
+        .eq("id", membership.household_id);
 
-    if (error) {
-      console.error("Error topping up:", error);
-      return;
+      if (error) {
+        console.error("Error topping up:", error);
+        setPurchaseError("We couldn't add those hours. You haven't been charged.");
+        return;
+      }
+
+      await supabase.from("purchases").insert({
+        household_id: membership.household_id,
+        hours_purchased: selectedBundle,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["household"] });
+      await queryClient.invalidateQueries({ queryKey: ["purchases"] });
+
+      setPurchased(true);
+      setTimeout(() => {
+        setPurchased(false);
+        setSelectedBundle(null);
+      }, 2000);
+    } finally {
+      setIsPurchasing(false);
     }
-
-    await supabase.from("purchases").insert({
-      household_id: membership.household_id,
-      hours_purchased: selectedBundle,
-    });
-
-    await queryClient.invalidateQueries({ queryKey: ["household"] });
-    await queryClient.invalidateQueries({ queryKey: ["purchases"] });
-
-    setPurchased(true);
-    setTimeout(() => {
-      setPurchased(false);
-      setSelectedBundle(null);
-    }, 2000);
   };
 
-  return (
-    <div className="max-w-2xl mx-auto">
-      <BackButton />
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-content-primary">Top up</h1>
-        <p className="text-sm text-content-muted mt-0.5">
-          Purchase hours for your household
-        </p>
-      </div>
+  const selectedTotal = selectedBundle
+    ? (selectedBundle * pricePerHour) / 100
+    : 0;
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface-secondary border border-border-default rounded-xl p-4">
-          <p className="text-xs text-content-muted mb-1">Current balance</p>
+  return (
+    <div className="mx-auto max-w-5xl pb-8">
+      <BackButton />
+
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-content-primary">
+          Top up hours
+        </h1>
+        <p className="mt-1 text-sm text-content-secondary">
+          Buy extra visitor hours for your household.
+        </p>
+      </header>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8">
+        <div>
+      {/* Summary strip */}
+      <section
+        aria-label="Your hours"
+        className={`${cardClass} mb-8 grid grid-cols-3 divide-x divide-border-subtle`}
+      >
+        <div className="p-4 sm:p-5">
+          <p className="text-sm text-content-secondary">Balance</p>
           {isLoading ? (
-            <div className="h-8 w-16 bg-surface-secondary rounded animate-pulse" />
+            <div className="mt-1 h-8 w-14 animate-pulse rounded-control bg-surface-elevated" />
           ) : (
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-semibold text-content-primary">
+            <p className="mt-1 flex items-baseline gap-1">
+              <span className="text-2xl font-semibold tabular-nums text-content-primary">
                 {household?.hoursBalance ?? 0}
               </span>
-              <span className="text-xs text-content-muted">hrs</span>
-            </div>
+              <span className="text-sm text-content-muted">hrs</span>
+            </p>
           )}
         </div>
 
-        <div className="bg-surface-secondary border border-border-default rounded-xl p-4">
-          <p className="text-xs text-content-muted mb-1">Quota remaining</p>
+        <div className="p-4 sm:p-5">
+          <p className="text-sm text-content-secondary">Used</p>
           {isLoading ? (
-            <div className="h-8 w-16 bg-surface-secondary rounded animate-pulse" />
+            <div className="mt-1 h-8 w-14 animate-pulse rounded-control bg-surface-elevated" />
           ) : (
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-semibold text-content-primary">
-                {quotaRemaining}
+            <p className="mt-1 flex items-baseline gap-1">
+              <span className="text-2xl font-semibold tabular-nums text-content-primary">
+                {usedThisMonth}
               </span>
-              <span className="text-xs text-content-muted">
-                / {monthlyQuota} hrs
+              <span className="text-sm text-content-muted">
+                / {monthlyQuota}
               </span>
-            </div>
+            </p>
           )}
         </div>
 
-        <div className="bg-surface-secondary border border-border-default rounded-xl p-4">
-          <p className="text-xs text-content-muted mb-1">Price per hour</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-semibold text-content-primary">
-              £{(pricePerHour / 100).toFixed(2)}
-            </span>
-          </div>
+        <div className="min-w-0 p-4 sm:p-5">
+          <p className="text-sm text-content-secondary">Per hour</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-content-primary">
+            {gbp.format(pricePerHour / 100)}
+          </p>
           {councilData && (
-            <p className="text-xs text-content-muted mt-1">
+            <p className="mt-0.5 truncate text-sm text-content-muted">
               {councilData.council.name}
             </p>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="bg-surface-secondary border border-border-default rounded-xl p-6 mb-4">
-        <p className="text-sm font-medium text-content-secondary mb-4">
-          Select hours to purchase
-        </p>
-        <div className="grid grid-cols-2 gap-3">
+      {/* Bundles */}
+      <section aria-labelledby="bundles-heading" className="mb-6">
+        <h2
+          id="bundles-heading"
+          className="mb-3 text-base font-semibold text-content-primary"
+        >
+          Choose a bundle
+        </h2>
+        <div
+          role="radiogroup"
+          aria-labelledby="bundles-heading"
+          className="grid grid-cols-2 gap-3"
+        >
           {HOUR_BUNDLES.map((hours) => {
             const total = (hours * pricePerHour) / 100;
-            const exceedsQuota = hours > quotaRemaining;
             const isSelected = selectedBundle === hours;
 
             return (
               <button
                 key={hours}
-                onClick={() =>
-                  !exceedsQuota && setSelectedBundle(isSelected ? null : hours)
-                }
-                disabled={exceedsQuota}
-                className={`relative p-4 rounded-xl border text-left transition-all ${
-                  exceedsQuota
-                    ? "border-border-subtle bg-danger-subtle opacity-80 cursor-not-allowed"
-                    : isSelected
-                      ? "border-accent bg-accent-subtle cursor-pointer"
-                      : "border-border-default hover:border-accent hover:bg-accent-subtle cursor-pointer"
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => setSelectedBundle(isSelected ? null : hours)}
+                className={`relative rounded-card border p-4 text-left transition-colors sm:p-5 ${
+                  isSelected
+                      ? "cursor-pointer border-accent bg-accent-subtle ring-1 ring-accent"
+                      : "cursor-pointer border-border-default bg-surface-secondary hover:border-border-strong hover:bg-surface-hover"
                 }`}
               >
-                {isSelected && (
-                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
-                  </div>
-                )}
-                <p
-                  className={`text-xl font-semibold ${isSelected ? "text-accent" : "text-content-primary"}`}
+                <span
+                  aria-hidden
+                  className={`absolute right-3 top-3 grid size-5 place-items-center rounded-full border transition-colors ${
+                    isSelected
+                      ? "border-accent bg-accent text-surface-primary"
+                      : "border-border-strong"
+                  }`}
                 >
-                  {hours} hrs
-                </p>
-                <p
-                  className={`text-sm mt-0.5 ${isSelected ? "text-content-secondary" : "text-content-muted"}`}
-                >
-                  £{total.toFixed(2)}
-                </p>
-                {exceedsQuota && (
-                  <p className="text-xs text-content-muted mt-1">
-                    Exceeds monthly quota
-                  </p>
-                )}
+                  {isSelected && <Check className="size-3" strokeWidth={3} />}
+                </span>
+                <span className="block text-2xl font-semibold tabular-nums text-content-primary">
+                  {hours}
+                  <span className="ml-1 text-base font-medium text-content-secondary">
+                    hrs
+                  </span>
+                </span>
+                <span className="mt-1 block text-sm tabular-nums text-content-secondary">
+                  {gbp.format(total)}
+                </span>
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Purchase button */}
-      <div className="flex items-center justify-between bg-surface-secondary border border-border-default rounded-xl px-6 py-4">
-        <div>
+      {/* Checkout bar: sticky on mobile so it stays in thumb reach */}
+      <div
+        className={`${cardClass} sticky bottom-4 z-10 flex items-center justify-between gap-4 px-4 py-3 sm:static sm:px-5 sm:py-4`}
+      >
+        <p className="min-w-0 text-sm text-content-secondary" aria-live="polite">
           {selectedBundle ? (
-            <p className="text-sm text-content-muted">
-              <span className="font-medium text-content-primary">
+            <>
+              <span className="font-semibold tabular-nums text-content-primary">
                 {selectedBundle} hrs
+              </span>{" "}
+              for{" "}
+              <span className="font-semibold tabular-nums text-content-primary">
+                {gbp.format(selectedTotal)}
               </span>
-              {" · "}
-              <span className="font-medium text-content-primary">
-                £{((selectedBundle * pricePerHour) / 100).toFixed(2)}
-              </span>
-            </p>
+            </>
           ) : (
-            <p className="text-sm text-content-muted">Select a bundle</p>
+            "Choose a bundle to continue"
           )}
-        </div>
+        </p>
         <button
+          type="button"
           onClick={handlePurchase}
-          disabled={!selectedBundle || purchased}
-          className={`flex items-center gap-2 px-5 py-2 text-sm font-medium rounded-lg transition-all ${
+          disabled={!selectedBundle || isPurchasing || purchased}
+          className={
             purchased
-              ? "bg-green-600 text-white"
-              : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          }`}
+              ? "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control bg-success px-5 text-sm font-semibold text-surface-primary"
+              : `${buttonPrimary} shrink-0`
+          }
         >
           {purchased ? (
             <>
-              <Check className="w-4 h-4" />
-              Purchased!
+              <Check className="size-4" aria-hidden />
+              Hours added
+            </>
+          ) : isPurchasing ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              Buying…
             </>
           ) : (
             <>
-              <Wallet className="w-4 h-4" />
-              Purchase
+              <Wallet className="size-4" aria-hidden />
+              Buy hours
             </>
           )}
         </button>
       </div>
-      {purchases.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-sm font-medium text-content-primary mb-3">
-            Purchase history
-          </h2>
-          <div className="bg-surface-secondary border border-border-default rounded-xl overflow-hidden">
-            {purchases.map((purchase, index) => (
-              <div
-                key={purchase.id}
-                className={`flex items-center justify-between px-5 py-3 ${
-                  index !== purchases.length - 1
-                    ? "border-b border-border-subtle"
-                    : ""
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-medium text-content-primary">
-                    {purchase.hoursPurchased} hrs purchased
-                  </p>
-                  <p className="text-xs text-content-muted mt-0.5">
-                    {new Date(purchase.createdAt).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <p className="text-sm font-medium text-content-primary">
-                  £
-                  {(
-                    (purchase.hoursPurchased *
-                      (councilData?.council?.pricePerHour ?? 0)) /
-                    100
-                  ).toFixed(2)}
-                </p>
-              </div>
-            ))}
-          </div>
+
+      {purchaseError && (
+        <div
+          role="alert"
+          className="mt-3 flex gap-2.5 rounded-control bg-danger-subtle px-3.5 py-3 text-sm text-danger"
+        >
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p>{purchaseError}</p>
         </div>
       )}
+
+        </div>
+
+        {/* History */}
+        <section aria-labelledby="history-heading" className="mt-12 lg:mt-0">
+          <h2
+            id="history-heading"
+            className="mb-3 text-base font-semibold text-content-primary"
+          >
+            Purchase history
+          </h2>
+          {purchases.length === 0 ? (
+            <p className={`${cardClass} px-4 py-6 text-center text-sm text-content-muted sm:px-5`}>
+              Hours you buy will show here.
+            </p>
+          ) : (
+            <>
+              <ul className={`${cardClass} divide-y divide-border-subtle`}>
+                {visiblePurchases.map((purchase) => (
+                  <li
+                    key={purchase.id}
+                    className="flex items-center gap-3 px-4 py-3 sm:px-5"
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-control bg-surface-elevated text-content-secondary">
+                      <Receipt className="size-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-content-primary">
+                        {purchase.hoursPurchased} hrs
+                      </p>
+                      <p className="text-sm text-content-muted">
+                        {purchaseDateFormatter.format(new Date(purchase.createdAt))}
+                      </p>
+                    </div>
+                    <p className="text-sm font-medium tabular-nums text-content-primary">
+                      {gbp.format(
+                        (purchase.hoursPurchased *
+                          (councilData?.council?.pricePerHour ?? 0)) /
+                          100,
+                      )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              {purchases.length > RECENT_PURCHASES && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPurchases((v) => !v)}
+                  className="mt-2 inline-flex h-10 cursor-pointer items-center rounded-control px-2 -ml-2 text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+                >
+                  {showAllPurchases
+                    ? "Show recent only"
+                    : `Show all ${purchases.length} purchases`}
+                </button>
+              )}
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
