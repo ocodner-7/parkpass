@@ -7,6 +7,7 @@ const GET_HOUSEHOLD = gql`
   query Household($householdId: ID!) {
     household(householdId: $householdId) {
       id
+      name
       members {
         id
         firstName

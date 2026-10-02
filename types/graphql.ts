@@ -65,6 +65,7 @@ export interface Purchase {
   id: string;
   householdId: string;
   hoursPurchased: number;
+  pricePaidPence: number | null;
   createdAt: string;
 }
 

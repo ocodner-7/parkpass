@@ -1,26 +1,57 @@
-import { Council, Household, Location, Pass, Purchase, Vehicle } from "@/types/graphql";
+import {
+  Council,
+  Household,
+  Location,
+  Pass,
+  Purchase,
+  Vehicle,
+} from "@/types/graphql";
 import { supabaseServer } from "@/lib/supabase.server";
+import {
+  requireHousehold,
+  requireUser,
+  type GraphQLContext,
+} from "@/app/api/graphql/context";
+import { CouncilRow } from "@/types/general";
+
+// supabaseServer uses the service role key, which bypasses RLS. Every
+// resolver that reads household data must call requireHousehold first.
+
+const mapCouncil = (council: CouncilRow): Council => ({
+  id: council.id,
+  name: council.name,
+  availableDurations: council.available_durations,
+  hoursRollOver: council.hours_roll_over,
+  maxHoursPerPass: council.max_hours_per_pass,
+  monthlyQuotaHours: council.monthly_quota_hours,
+  operatingHoursStart: council.operating_hours_start,
+  operatingHoursEnd: council.operating_hours_end,
+  pricePerHour: council.price_per_hour,
+  requiresVehicleReg: council.requires_vehicle_reg,
+});
 
 export const queryResolvers = {
   locations: async (
     _: unknown,
     args: { householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Location[] | null> => {
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return [];
+
     const { data: locations } = await supabaseServer
       .from("locations")
       .select("*")
-      .eq("household_id", args.householdId);
+      .eq("household_id", householdId);
 
     const locationIds = locations?.map((l) => l.id) ?? [];
 
-    const { data: passes, error: passesError } = await supabaseServer
+    const { data: passes } = await supabaseServer
       .from("passes")
       .select("location_id")
       .in("location_id", locationIds)
       .eq("status", "ACTIVE")
       .gt("end_time", new Date().toISOString());
-
-    console.log("passesError:", passesError);
 
     return (
       locations?.map((loc) => ({
@@ -38,15 +69,23 @@ export const queryResolvers = {
       })) ?? []
     );
   },
+
   location: async (
     _: unknown,
     args: { locationId: string },
+    ctx: GraphQLContext,
   ): Promise<Location | null> => {
+    requireUser(ctx);
+    if (!ctx.householdId) return null;
+
+    // Scoped to the user's own household, so other households' locations
+    // come back as not found
     const { data: location } = await supabaseServer
       .from("locations")
       .select("*")
       .eq("id", args.locationId)
-      .single();
+      .eq("household_id", ctx.householdId)
+      .maybeSingle();
 
     if (!location) return null;
 
@@ -70,10 +109,15 @@ export const queryResolvers = {
       isDefault: location.is_default,
     };
   },
+
   passes: async (
     _: unknown,
     args: { locationId: string; householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Pass[] | null> => {
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return [];
+
     // trigger pass expiry in the DB
     await supabaseServer.rpc("expire_passes");
 
@@ -81,7 +125,7 @@ export const queryResolvers = {
       .from("passes")
       .select("*")
       .eq("location_id", args.locationId)
-      .eq("household_id", args.householdId);
+      .eq("household_id", householdId);
 
     return (
       passes?.map((p) => ({
@@ -96,10 +140,15 @@ export const queryResolvers = {
       })) ?? []
     );
   },
+
   activePasses: async (
     _: unknown,
     args: { locationId: string; householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Pass[] | null> => {
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return [];
+
     // trigger pass expiry in the DB
     await supabaseServer.rpc("expire_passes");
 
@@ -107,7 +156,7 @@ export const queryResolvers = {
       .from("passes")
       .select("*")
       .eq("location_id", args.locationId)
-      .eq("household_id", args.householdId)
+      .eq("household_id", householdId)
       .eq("status", "ACTIVE")
       .gt("end_time", new Date().toISOString());
 
@@ -124,14 +173,19 @@ export const queryResolvers = {
       })) ?? []
     );
   },
+
   household: async (
     _: unknown,
     args: { householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Household | null> => {
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return null;
+
     const { data: household } = await supabaseServer
       .from("households")
       .select("*")
-      .eq("id", args.householdId)
+      .eq("id", householdId)
       .single();
 
     if (!household) return null;
@@ -140,7 +194,7 @@ export const queryResolvers = {
     const { data: memberships } = await supabaseServer
       .from("household_members")
       .select("user_id, role")
-      .eq("household_id", args.householdId);
+      .eq("household_id", householdId);
 
     // Fetch profiles for each member
     const memberIds = memberships?.map((m) => m.user_id) ?? [];
@@ -158,28 +212,33 @@ export const queryResolvers = {
           firstName: profile?.first_name ?? "",
           lastName: profile?.last_name ?? "",
           email: profile?.email ?? "",
-          householdId: args.householdId,
+          householdId,
           role: membership.role as "OWNER" | "MEMBER",
         };
       }) ?? [];
 
     return {
       id: household.id,
-      members: members,
+      members,
       name: household.name,
       hoursBalance: household.hours_balance,
       monthlyQuota: household.monthly_quota,
       quotaUsedThisMonth: household.quota_used_this_month,
     };
   },
+
   vehicles: async (
     _: unknown,
     args: { householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Vehicle[] | null> => {
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return [];
+
     const { data: vehicles } = await supabaseServer
       .from("vehicles")
       .select("*")
-      .eq("household_id", args.householdId);
+      .eq("household_id", householdId);
 
     return (
       vehicles?.map((vehicle) => ({
@@ -191,59 +250,51 @@ export const queryResolvers = {
       })) ?? []
     );
   },
-  councils: async (): Promise<Council[] | null> => {
+
+  // Councils are public reference data, but still require a signed-in user
+  councils: async (
+    _: unknown,
+    __: unknown,
+    ctx: GraphQLContext,
+  ): Promise<Council[] | null> => {
+    requireUser(ctx);
+
     const { data: councils } = await supabaseServer
       .from("councils")
       .select("*");
 
-    return (
-      councils?.map((council) => ({
-        id: council.id,
-        name: council.name,
-        availableDurations: council.available_durations,
-        hoursRollOver: council.hours_roll_over,
-        maxHoursPerPass: council.max_hours_per_pass,
-        monthlyQuotaHours: council.monthly_quota_hours,
-        operatingHoursStart: council.operating_hours_start,
-        operatingHoursEnd: council.operating_hours_end,
-        pricePerHour: council.price_per_hour,
-        requiresVehicleReg: council.requires_vehicle_reg,
-      })) ?? []
-    );
+    return councils?.map(mapCouncil) ?? [];
   },
+
   council: async (
     _: unknown,
     args: { councilId: string },
+    ctx: GraphQLContext,
   ): Promise<Council | null> => {
+    requireUser(ctx);
+    if (!args.councilId) return null;
+
     const { data: council } = await supabaseServer
       .from("councils")
       .select("*")
       .eq("id", args.councilId)
-      .single();
+      .maybeSingle();
 
-    return {
-      id: council.id,
-      name: council.name,
-      availableDurations: council.available_durations,
-      hoursRollOver: council.hours_roll_over,
-      maxHoursPerPass: council.max_hours_per_pass,
-      monthlyQuotaHours: council.monthly_quota_hours,
-      operatingHoursStart: council.operating_hours_start,
-      operatingHoursEnd: council.operating_hours_end,
-      pricePerHour: council.price_per_hour,
-      requiresVehicleReg: council.requires_vehicle_reg,
-    };
+    return council ? mapCouncil(council) : null;
   },
+
   purchases: async (
     _: unknown,
     args: { householdId: string },
+    ctx: GraphQLContext,
   ): Promise<Purchase[]> => {
-    await supabaseServer.rpc("expire_passes");
+    const householdId = requireHousehold(ctx, args.householdId);
+    if (!householdId) return [];
 
     const { data: purchases } = await supabaseServer
       .from("purchases")
       .select("*")
-      .eq("household_id", args.householdId)
+      .eq("household_id", householdId)
       .order("created_at", { ascending: false });
 
     return (
@@ -251,6 +302,7 @@ export const queryResolvers = {
         id: p.id,
         householdId: p.household_id,
         hoursPurchased: p.hours_purchased,
+        pricePaidPence: p.price_paid_pence,
         createdAt: p.created_at,
       })) ?? []
     );

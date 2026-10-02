@@ -46,7 +46,9 @@ export default function TopUpPage() {
   const household = data?.household;
   const { data: councilData } = useCouncil(activeLocation?.councilId ?? "");
   const pricePerHour = councilData?.council?.pricePerHour ?? 150; // pence
-  const monthlyQuota = councilData?.council?.monthlyQuotaHours ?? 50;
+  // The household's own allowance is the single source of truth; the
+  // monthly reset job uses the same column
+  const monthlyQuota = household?.monthlyQuota ?? 50;
   const usedThisMonth = household?.quotaUsedThisMonth ?? 0;
 
   const { data: purchasesData } = usePurchases(HOUSEHOLD?.id ?? "");
@@ -61,56 +63,18 @@ export default function TopUpPage() {
     setPurchaseError("");
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setPurchaseError("Your session has expired. Sign in again to continue.");
-        return;
-      }
-
-      const { data: membership } = await supabase
-        .from("household_members")
-        .select("household_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!membership) {
-        setPurchaseError("We couldn't find your household. Refresh and try again.");
-        return;
-      }
-
-      const { data: household } = await supabase
-        .from("households")
-        .select("hours_balance")
-        .eq("id", membership.household_id)
-        .single();
-
-      if (!household) {
-        setPurchaseError("We couldn't find your household. Refresh and try again.");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("households")
-        // Bought hours only add to this month's balance. They don't count as
-        // used, and they expire with the monthly reset like the allowance.
-        .update({
-          hours_balance: household.hours_balance + selectedBundle,
-        })
-        .eq("id", membership.household_id);
+      // One transaction in the database: works out the price from the
+      // council, adds the hours, and records what was actually paid
+      const { error } = await supabase.rpc("purchase_hours", {
+        p_location_id: activeLocation?.id,
+        p_hours: selectedBundle,
+      });
 
       if (error) {
         console.error("Error topping up:", error);
-        setPurchaseError("We couldn't add those hours. You haven't been charged.");
+        setPurchaseError(error.message);
         return;
       }
-
-      await supabase.from("purchases").insert({
-        household_id: membership.household_id,
-        hours_purchased: selectedBundle,
-      });
 
       await queryClient.invalidateQueries({ queryKey: ["household"] });
       await queryClient.invalidateQueries({ queryKey: ["purchases"] });
@@ -247,7 +211,6 @@ export default function TopUpPage() {
         </div>
       </section>
 
-      {/* Checkout bar: sticky on mobile so it stays in thumb reach */}
       <div
         className={`${cardClass} sticky bottom-4 z-10 flex items-center justify-between gap-4 px-4 py-3 sm:static sm:px-5 sm:py-4`}
       >
@@ -340,9 +303,9 @@ export default function TopUpPage() {
                     </div>
                     <p className="text-sm font-medium tabular-nums text-content-primary">
                       {gbp.format(
-                        (purchase.hoursPurchased *
-                          (councilData?.council?.pricePerHour ?? 0)) /
-                          100,
+                        (purchase.pricePaidPence ??
+                          purchase.hoursPurchased *
+                            (councilData?.council?.pricePerHour ?? 0)) / 100,
                       )}
                     </p>
                   </li>

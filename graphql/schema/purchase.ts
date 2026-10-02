@@ -5,6 +5,7 @@ export const purchaseTypeDefs = gql`
     id: ID!
     householdId: ID!
     hoursPurchased: Int!
+    pricePaidPence: Int
     createdAt: String!
   }
 `;

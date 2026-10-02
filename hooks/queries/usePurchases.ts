@@ -8,6 +8,7 @@ const GET_PURCHASES = gql`
     purchases(householdId: $householdId) {
       id
       hoursPurchased
+      pricePaidPence
       createdAt
     }
   }
