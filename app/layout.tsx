@@ -22,9 +22,6 @@ const atkinson = Atkinson_Hyperlegible_Next({
 export const metadata: Metadata = {
   title: "ParkPass",
   description: "London parking permits",
-  icons: {
-    icon: "/images/logo/emblem.png",
-  },
 };
 
 export default function RootLayout({

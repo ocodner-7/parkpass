@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { AnimatePresence } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Plus, Star, Trash2, Users } from "lucide-react";
+import { ChevronRight, Plus, Star, Ticket, Trash2, Users } from "lucide-react";
 import { useLocationStore } from "@/store/locationStore";
 import { useLocations } from "@/hooks/queries/useLocations";
 import { Location } from "@/types/graphql";
@@ -77,22 +76,28 @@ export const Sidebar = () => {
       <div className="flex h-16 items-center border-b border-border-subtle px-4">
         <Link
           href="/dashboard"
-          className="block w-36 rounded-control"
           aria-label="ParkPass dashboard"
+          className="flex items-center gap-2.5 rounded-control"
         >
-          <Image
-            src="/images/logo/logo.png"
-            alt=""
-            width={500}
-            height={500}
-            className="h-auto w-full"
-            priority
-          />
+          <span className="grid size-9 place-items-center rounded-control bg-sign-blue text-white">
+            <Ticket className="size-5" aria-hidden />
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-base font-semibold text-content-primary">
+              ParkPass
+            </span>
+            <span className="text-xs text-content-muted">
+              London Parking Permits
+            </span>
+          </span>
         </Link>
       </div>
 
       {/* Locations */}
-      <nav aria-labelledby="locations-heading" className="flex min-h-0 flex-1 flex-col">
+      <nav
+        aria-labelledby="locations-heading"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
           <h2
             id="locations-heading"
@@ -185,7 +190,10 @@ export const Sidebar = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!location.isDefault) {
-                            setDefaultLocation(location.id, HOUSEHOLD?.id ?? "");
+                            setDefaultLocation(
+                              location.id,
+                              HOUSEHOLD?.id ?? "",
+                            );
                           }
                         }}
                         aria-pressed={location.isDefault}
@@ -194,7 +202,11 @@ export const Sidebar = () => {
                             ? `${name} is your default location`
                             : `Make ${name} your default location`
                         }
-                        title={location.isDefault ? "Default location" : "Make default"}
+                        title={
+                          location.isDefault
+                            ? "Default location"
+                            : "Make default"
+                        }
                         className={`${rowAction} ${
                           location.isDefault
                             ? "opacity-100 text-warning"
