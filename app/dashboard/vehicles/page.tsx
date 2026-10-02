@@ -35,7 +35,7 @@ const plateInputClass =
   "h-14 w-full rounded-control border-2 border-black/80 bg-plate-yellow px-4 text-center font-plate text-2xl uppercase tracking-widest text-neutral-950 placeholder:text-neutral-950/35 focus-visible:outline-none focus:ring-3 focus:ring-accent";
 
 const modalPanel =
-  "relative mx-4 flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
+  "relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
 
 function VehicleRow({
   vehicle,
@@ -126,14 +126,8 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <ModalWrapper onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="add-vehicle-title"
-        className={`${modalPanel} max-w-md`}
-      >
+    <ModalWrapper onClose={onClose} titleId="add-vehicle-title" size="md">
+      <form onSubmit={handleSubmit} className={modalPanel}>
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 sm:px-6">
           <h2
             id="add-vehicle-title"

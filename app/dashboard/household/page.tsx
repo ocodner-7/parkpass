@@ -39,7 +39,7 @@ const inputClass =
   "h-11 w-full rounded-control border border-border-strong bg-surface-primary px-3.5 text-base text-content-primary placeholder:text-content-muted transition-colors focus-visible:outline-none focus:border-accent focus:ring-3 focus:ring-accent/25 aria-invalid:border-danger aria-invalid:focus:ring-danger/25 sm:text-sm";
 
 const modalPanel =
-  "relative mx-4 flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
+  "relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-card border border-border-default bg-surface-secondary shadow-2xl shadow-black/50";
 
 const roleConfig = {
   OWNER: {
@@ -207,14 +207,8 @@ function InviteMemberModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <ModalWrapper onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="invite-title"
-        className={`${modalPanel} max-w-md`}
-      >
+    <ModalWrapper onClose={onClose} titleId="invite-title" size="md">
+      <form onSubmit={handleSubmit} className={modalPanel}>
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 sm:px-6">
           <h2
             id="invite-title"

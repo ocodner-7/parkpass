@@ -1,17 +1,39 @@
 "use client";
-import { useState } from "react";
+
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CircleAlert, Eye, EyeOff, Loader2, Ticket } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+
+// Shared auth styles: keep these strings identical across the auth pages
+const authShell =
+  "flex min-h-dvh items-center justify-center bg-surface-primary px-5 py-12";
+
+const authCard =
+  "w-full max-w-sm sm:rounded-card sm:border sm:border-border-default sm:bg-surface-secondary sm:p-8 sm:shadow-card";
+
+const labelClass = "block text-sm font-medium text-content-secondary";
+
+const inputClass =
+  "h-11 w-full rounded-control border border-border-strong bg-surface-primary px-3.5 text-base text-content-primary placeholder:text-content-muted transition-colors focus-visible:outline-none focus:border-accent focus:ring-3 focus:ring-accent/25 aria-invalid:border-danger aria-invalid:focus:ring-danger/25 sm:text-sm";
+
+const buttonPrimary =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-control bg-accent-solid px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-solid-hover disabled:cursor-not-allowed disabled:opacity-60";
+
+const textLink =
+  "font-medium text-accent transition-colors hover:text-accent-hover hover:underline";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
     setIsLoading(true);
 
@@ -20,86 +42,133 @@ export default function LoginPage() {
       password,
     });
 
-    console.log("data:", data);
-    console.log("error:", error);
-
     if (error) {
-      setError(error.message);
+      // Registered but never clicked the confirmation link
+      setError(
+        error.code === "email_not_confirmed"
+          ? "Confirm your email first. Check your inbox for the link we sent when you signed up."
+          : error.message,
+      );
       setIsLoading(false);
       return;
     }
 
-    router.push("/onboarding");
+    // Send people with a household straight to the dashboard, instead of
+    // detouring through onboarding's spinner and redirect
+    const { data: membership } = await supabase
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    router.push(membership ? "/dashboard" : "/onboarding");
   };
 
   return (
-    <div className="min-h-screen bg-surface-primary flex items-center justify-center">
-      <div className="bg-surface-secondary border border-border-default rounded-2xl shadow-sm w-full max-w-sm p-8">
+    <main className={authShell}>
+      <div className={authCard}>
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-content-primary">
-            ParkPass
+          <div className="mb-6 flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-control bg-sign-blue text-white">
+              <Ticket className="size-5" aria-hidden />
+            </span>
+            <span className="text-base font-semibold text-content-primary">
+              ParkPass
+            </span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-content-primary">
+            Sign in
           </h1>
-          <p className="text-sm text-content-muted mt-1">
-            Sign in to your account
+          <p className="mt-1 text-sm text-content-secondary">
+            Manage visitor parking for your household.
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-xs font-medium text-content-muted mb-1.5">
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div className="space-y-1.5">
+            <label htmlFor="email" className={labelClass}>
               Email address
             </label>
             <input
-              type="email"
               id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? "login-error" : undefined}
+              className={inputClass}
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-xs font-medium text-content-muted mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              className="w-full px-3 py-2.5 text-sm border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="password" className={labelClass}>
+                Password
+              </label>
+              <Link href="/forgot-password" className={`text-sm ${textLink}`}>
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? "login-error" : undefined}
+                className={`${inputClass} pr-12`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-1 my-auto grid size-9 place-items-center rounded-control text-content-muted transition-colors hover:bg-surface-hover hover:text-content-primary"
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" aria-hidden />
+                ) : (
+                  <Eye className="size-4" aria-hidden />
+                )}
+              </button>
+            </div>
           </div>
-          <div className="flex justify-end mt-1">
-            <Link
-              href="/forgot-password"
-              className="text-xs text-accent hover:underline cursor-pointer"
+
+          {error && (
+            <div
+              id="login-error"
+              role="alert"
+              className="flex gap-2.5 rounded-control bg-danger-subtle px-3.5 py-3 text-sm text-danger"
             >
-              Forgot password?
-            </Link>
-          </div>
-
-          {error && <p className="text-xs text-red-500">{error}</p>}
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>{error}</p>
+            </div>
+          )}
 
           <button
-            onClick={handleLogin}
-            disabled={isLoading || !email || !password}
-            className="w-full py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            type="submit"
+            disabled={isLoading}
+            className={`${buttonPrimary} w-full`}
           >
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            {isLoading ? "Signing in…" : "Sign in"}
           </button>
-        </div>
+        </form>
 
-        <p className="text-xs text-content-muted text-center mt-6">
-          {`Don't have an account?`}{" "}
-          <Link href="/register" className="text-blue-600 hover:underline">
-            Register
+        <p className="mt-8 text-center text-sm text-content-secondary">
+          New to ParkPass?{" "}
+          <Link href="/register" className={textLink}>
+            Create an account
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

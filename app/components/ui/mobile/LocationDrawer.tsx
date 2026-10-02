@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { Check, MapPin, Plus, Star, X } from "lucide-react";
-import { motion } from "motion/react";
+import { ModalWrapper } from "../ModalWrapper";
 import { useLocationStore } from "@/store/locationStore";
 import { useLocations } from "@/hooks/queries/useLocations";
 import { useHouseholdStore } from "@/store/householdStore";
@@ -29,37 +28,13 @@ export function LocationDrawer({
     (a, b) => Number(b.isDefault) - Number(a.isDefault),
   );
 
-  // Escape closes the sheet
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
   return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-        onClick={onClose}
-        aria-hidden
-      />
-
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="location-drawer-title"
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 32, stiffness: 380 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-[1.25rem] border-t border-border-default bg-surface-secondary shadow-2xl shadow-black/60 lg:hidden"
-      >
+    <ModalWrapper
+      onClose={onClose}
+      titleId="location-drawer-title"
+      variant="sheet"
+    >
+      <div className="flex max-h-[85dvh] w-full flex-col rounded-t-[1.25rem] border-t border-border-default bg-surface-secondary shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between px-5 pb-3 pt-4">
           <h2
             id="location-drawer-title"
@@ -188,7 +163,7 @@ export function LocationDrawer({
             Add a location
           </button>
         </div>
-      </motion.div>
-    </>
+      </div>
+    </ModalWrapper>
   );
 }
