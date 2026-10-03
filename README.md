@@ -121,7 +121,13 @@ Set up the database in the Supabase SQL editor, in this order:
 1. Create the base tables and the profiles trigger (below)
 2. Seed the 32 London boroughs with `scripts/seed-councils.sql`
 3. Enable the `pg_cron` extension (Database → Extensions)
-4. Run `supabase/migrations/20261002000000_logic_pass.sql` for the database functions, constraints and the monthly reset job
+4. Run the files in `supabase/migrations/` in filename order. Each one starts with a comment explaining exactly what it changes and why:
+   - `..._locations_council_foreign_key.sql`: makes `locations.council_id` a UUID with a foreign key to `councils`
+   - `..._household_membership_rules.sql`: one household per user, and at most 6 members
+   - `..._monthly_allowance_reset.sql`: the 50-hour default and the monthly reset job
+   - `..._create_household_function.sql`: creates a household and its owner in one transaction
+   - `..._issue_pass_function.sql`: issues a pass and spends the hours in one transaction
+   - `..._purchase_hours_function.sql`: buys hours at the council's price and records what was paid
 
 ```sql
 -- Profiles trigger (runs on new user sign-up)
