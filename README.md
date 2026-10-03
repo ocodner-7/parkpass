@@ -119,7 +119,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Set up the database in the Supabase SQL editor, in this order:
 
 1. Create the base tables and the profiles trigger (below)
-2. Seed the 32 London boroughs with `scripts/seed-councils.sql`
+2. Seed the 32 London boroughs with `supabase/scripts/seed-councils.sql`
 3. Enable the `pg_cron` extension (Database → Extensions)
 4. Run the files in `supabase/migrations/` in filename order. Each one starts with a comment explaining exactly what it changes and why:
    - `..._locations_council_foreign_key.sql`: makes `locations.council_id` a UUID with a foreign key to `councils`
